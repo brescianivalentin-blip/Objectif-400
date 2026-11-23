@@ -2385,6 +2385,106 @@ gen('su.int', { sub: 'calcul', ch: 'suite', name: 'Intérêts simples et compos�
   return { q: P(`On place ${eur(C)} à ${pc(t)} par an, à intérêts <b>${simple ? 'simples' : 'composés'}</b>. De quelle somme dispose-t-on au bout de ${n} ans ?`), ...m, expl: simple ? steps(`Intérêts simples : chaque année, ${pc(t)} de ${fmt(C)} = ${fmt(C * t / 100)} €.`, `Sur ${n} ans : ${n} ${X} ${fmt(C * t / 100)} = ${fmt(C * t * n / 100)} €.`, `Total : ${eur2(val)}.`) + res(eur2(val)) : steps(`Intérêts composés : × ${fmt(1 + t / 100)} chaque année.`, `${fmt(C)} ${X} ${fmt(1 + t / 100)}<sup>${n}</sup> = ${fmt(C)} ${X} ${fmt(round(Math.pow(1 + t / 100, n), 6))} = ${eur2(val)}.`) + res(eur2(val)) };
 });
 
+/* ---- 33-commerce.js ---- */
+/* ===== CALCUL : mathématiques commerciales (marge, CA, seuil de rentabilité) ===== */
+chapter({
+  id: 'com', sub: 'calcul', order: 4.5, title: 'Mathématiques commerciales', short: 'Maths commerciales',
+  lesson: `
+<p>Tu as vu ces notions en STMG : au Tage Mage, elles reviennent sous forme de problèmes de pourcentages. C'est un chapitre où ton bac est un vrai avantage.</p>
+<h3><span class="hl">1. Le vocabulaire</span></h3>
+<div class="tablewrap"><table>
+<tr><th>Notion</th><th>Calcul</th></tr>
+<tr><td>Marge</td><td>prix de vente HT − prix d'achat</td></tr>
+<tr><td>Taux de marge</td><td>marge ÷ prix d'<b>achat</b></td></tr>
+<tr><td>Taux de marque</td><td>marge ÷ prix de <b>vente</b></td></tr>
+<tr><td>Coefficient multiplicateur</td><td>prix de vente ÷ prix d'achat</td></tr>
+</table></div>
+<div class="ex"><b>Exemple</b><span>Prix d'achat 80 €, prix de vente 100 € : marge = 20 €.</span><span>Taux de marge = 20 ÷ 80 = <b>25 %</b>. Taux de marque = 20 ÷ 100 = <b>20 %</b>.</span></div>
+<div class="trap"><b>Piège n°1 :</b> le taux de marge se calcule sur le prix d'ACHAT, le taux de marque sur le prix de VENTE. Ils ne sont jamais égaux.</div>
+<div class="formula">PV = PA × (1 + taux de marge)<br>PA = PV × (1 − taux de marque)<br>taux de marque = ${F('taux de marge', '1 + taux de marge')}</div>
+<p>Exemple de conversion : un taux de marge de 25 % donne un taux de marque de 0,25 ÷ 1,25 = 20 %.</p>
+<h3><span class="hl">2. Le chiffre d'affaires</span></h3>
+<div class="formula">CA = prix × quantité</div>
+<p>Si le prix augmente de 10 % et que la quantité vendue baisse de 10 %, le CA est multiplié par 1,1 × 0,9 = 0,99 : il <b>baisse</b> de 1 %.</p>
+<div class="trap"><b>Piège n°2 :</b> +10 % et −10 % ne se compensent pas. On multiplie les coefficients, comme pour les évolutions successives.</div>
+<h3><span class="hl">3. Coûts, bénéfice et seuil de rentabilité</span></h3>
+<div class="formula">coûts totaux = coûts fixes + coût variable unitaire × quantité<br>bénéfice = CA − coûts totaux<br>seuil de rentabilité (en unités) = ${F('coûts fixes', 'prix de vente − coût variable unitaire')}</div>
+<div class="ex"><b>Exemple</b><span>Coûts fixes 12 000 €, prix de vente 50 €, coût variable 30 € par unité.</span><span>Chaque unité rapporte 50 − 30 = 20 € de marge. Il faut vendre 12 000 ÷ 20 = <b>600 unités</b> pour couvrir les coûts fixes.</span></div>`,
+});
+
+gen('com.marge', { sub: 'calcul', ch: 'com', name: 'Marge, taux de marge et taux de marque', target: 60 }, (R, d) => {
+  if (d === 1) {
+    const t = R.pick([10, 20, 25, 40, 50]), PA = R.int(2, 30) * 20, PV = round(PA * (1 + t / 100), 2);
+    const m = mcq(R, PV, [round(PA + t, 2), round(PA / (1 - t / 100), 2), round(PA * t / 100, 2), round(PV + PA * 0.05, 2)], { render: eur2 });
+    return { q: P(`Un commerçant achète un article ${eur(PA)} et applique un taux de marge de ${pc(t)}. À quel prix le revend-il (hors taxes) ?`), ...m, expl: steps(`Le taux de marge porte sur le prix d'achat : marge = ${pc(t)} de ${fmt(PA)} = ${eur2(PA * t / 100)}.`, `Prix de vente = ${fmt(PA)} ${X} ${fmt(1 + t / 100)} = ${eur2(PV)}.`) + res(eur2(PV)) };
+  }
+  if (d === 2) {
+    const [PA, PV] = R.pick([[80, 100], [60, 75], [120, 150], [40, 50], [200, 250], [75, 100], [150, 200], [50, 75]]);
+    const askMarge = R.chance(0.5);
+    const tm = round((PV - PA) / PA * 100, 2), tq = round((PV - PA) / PV * 100, 2);
+    const val = askMarge ? tm : tq;
+    const m = mcq(R, val, [askMarge ? tq : tm, PV - PA, round(PA / PV * 100, 2), round(val + 5, 2)], { render: pc });
+    return { q: P(`Un article acheté ${eur(PA)} est revendu ${eur(PV)} hors taxes. Quel est le <b>taux de ${askMarge ? 'marge' : 'marque'}</b> ?`), ...m, expl: steps(`Marge = ${PV} ${MINUS} ${PA} = ${PV - PA} €.`, askMarge ? `Taux de marge = marge ${DV} prix d'ACHAT = ${PV - PA} ${DV} ${PA} = ${fmt(tm / 100)}, soit ${pc(tm)}.` : `Taux de marque = marge ${DV} prix de VENTE = ${PV - PA} ${DV} ${PV} = ${fmt(tq / 100)}, soit ${pc(tq)}.`) + res(pc(val)), trap: `<b>Piège :</b> le taux de ${askMarge ? 'marque' : 'marge'} vaut ${pc(askMarge ? tq : tm)}, ce n'est pas ce qu'on demande.` };
+  }
+  if (R.chance(0.5)) {
+    const [tm, tq] = R.pick([[25, 20], [50, 100 / 3], [100, 50], [20, 100 / 6], [60, 37.5], [150, 60], [300, 75]]);
+    const fromMarge = R.chance(0.5);
+    const val = round(fromMarge ? tq : tm, 1), giv = fromMarge ? tm : tq;
+    const approx = !Number.isInteger(round(val * 10, 6) / 10) || !Number.isInteger(val);
+    const rend = (v) => (approx && !Number.isInteger(v) ? '≈ ' : '') + pc(round(v, 1));
+    const m = mcq(R, val, [giv, round(fromMarge ? giv * 0.9 : giv * 1.1, 1), round(100 - giv, 1), round(val + 5, 1)], { render: rend });
+    return { q: P(`Un produit est vendu avec un taux de ${fromMarge ? 'marge' : 'marque'} de ${pc(round(giv, 2))}. Quel est son taux de ${fromMarge ? 'marque' : 'marge'} ?`), ...m, expl: steps(`Prenons un prix ${fromMarge ? 'd\'achat de 100 €' : 'de vente de 100 €'}.`, fromMarge ? `Marge = ${fmt(giv)} €, donc prix de vente = ${fmt(100 + giv)} €.` : `Marge = ${fmt(round(giv, 2))} €, donc prix d'achat = ${fmt(round(100 - giv, 2))} €.`, fromMarge ? `Taux de marque = ${fmt(giv)} ${DV} ${fmt(100 + giv)} ≈ ${pc(round(val, 1))}.` : `Taux de marge = ${fmt(round(giv, 2))} ${DV} ${fmt(round(100 - giv, 2))} = ${pc(round(val, 1))}.`) + res(rend(val)), tip: '<b>Méthode :</b> raisonne sur un prix de 100 €, tout devient concret.' };
+  }
+  const tq = R.pick([20, 25, 40, 50]), PV = R.int(2, 25) * 20, PA = round(PV * (1 - tq / 100), 2);
+  const m = mcq(R, PA, [round(PV / (1 + tq / 100), 2), round(PV - tq, 2), round(PV * tq / 100, 2), round(PA + 10, 2)], { render: eur2 });
+  return { q: P(`Un article est vendu ${eur(PV)} hors taxes avec un taux de marque de ${pc(tq)}. Quel était son prix d'achat ?`), ...m, expl: steps(`Le taux de marque porte sur le prix de vente : marge = ${pc(tq)} de ${fmt(PV)} = ${eur2(PV * tq / 100)}.`, `Prix d'achat = ${fmt(PV)} ${MINUS} ${fmt(PV * tq / 100)} = ${eur2(PA)}.`) + res(eur2(PA)), trap: `<b>Piège :</b> diviser ${fmt(PV)} par ${fmt(1 + tq / 100)} reviendrait à traiter ${pc(tq)} comme un taux de marge.` };
+});
+gen('com.ca', { sub: 'calcul', ch: 'com', name: 'Chiffre d\'affaires', target: 55 }, (R, d) => {
+  if (d === 1) {
+    const p = R.pick([12, 15, 20, 25, 8, 40]), q = R.int(3, 40) * 10, ca = p * q;
+    const m = mcq(R, ca, [p + q, ca / 10, ca * 10, ca + p * 10], { render: eur });
+    return { q: P(`Une boutique vend ${fmt(q)} articles à ${eur(p)} l'unité. Quel est son chiffre d'affaires ?`), ...m, expl: steps(`CA = prix ${X} quantité = ${p} ${X} ${fmt(q)} = ${eur(ca)}.`) + res(eur(ca)) };
+  }
+  if (d === 2) {
+    const [a, b] = R.pick([[10, -10], [20, -10], [-20, 25], [10, 10], [25, -20], [-10, 20], [30, -20], [50, -40]]);
+    const tot = round(((1 + a / 100) * (1 + b / 100) - 1) * 100, 2);
+    const m = mcq(R, tot, [a + b, round(tot + 2, 2), -tot, round((a + b) / 2, 2)], { render: sgnPc, positive: false });
+    return { q: P(`Le prix d'un produit évolue de ${sgnPc(a)} et la quantité vendue de ${sgnPc(b)}. De combien varie le chiffre d'affaires ?`), ...m, expl: steps(`CA = prix ${X} quantité : on multiplie les coefficients.`, `${fmt(1 + a / 100)} ${X} ${fmt(1 + b / 100)} = ${fmt(round((1 + a / 100) * (1 + b / 100), 4))}.`, `Soit ${sgnPc(tot)}.`) + res(sgnPc(tot)), trap: `<b>Piège :</b> additionner (${sgnPc(a + b)}).` };
+  }
+  const [a, need] = R.pick([[25, -20], [-20, 25], [50, -33.33], [100, -50], [-50, 100], [60, -37.5], [-25, 33.33]]);
+  const val = round(need, 2), approx = !Number.isInteger(val);
+  const rend = (v) => (approx ? '≈ ' : '') + sgnPc(round(v, 1));
+  const m = mcq(R, round(val, 1), [-a, round(-a * 0.8, 1), round(val + (val > 0 ? 10 : -10), 1), round(val / 2, 1)], { render: rend, positive: false });
+  return { q: P(`Une entreprise augmente ou baisse son prix de ${sgnPc(a)}. De combien doit varier la quantité vendue pour que le chiffre d'affaires reste identique ?`), ...m, expl: steps(`Il faut ${fmt(1 + a / 100)} ${X} CM(quantité) = 1.`, `CM(quantité) = 1 ${DV} ${fmt(1 + a / 100)} = ${fmt(round(1 / (1 + a / 100), 4))}.`, `Soit ${rend(val)}.`) + res(rend(val)), trap: `<b>Piège :</b> répondre ${sgnPc(-a)} (c'est l'évolution réciproque qu'il faut).` };
+});
+gen('com.seuil', { sub: 'calcul', ch: 'com', name: 'Seuil de rentabilité', target: 65 }, (R, d) => {
+  const mu = R.pick([5, 8, 10, 12, 15, 20, 25, 40]), units = R.int(2, 30) * (d === 1 ? 50 : 20), CF = mu * units;
+  const cv = R.pick([10, 15, 20, 30, 35, 45]), pv = cv + mu;
+  if (d === 1) {
+    const m = mcq(R, units, [CF / pv, CF / cv, units * 2, units + mu], { valid: (v) => Number.isInteger(v) && v > 0 });
+    return { q: P(`Une entreprise a ${eur(CF)} de coûts fixes. Chaque produit vendu lui rapporte une marge de ${eur(mu)}. Combien de produits doit-elle vendre pour couvrir ses coûts fixes ?`), ...m, expl: steps(`Seuil = coûts fixes ${DV} marge unitaire = ${fmt(CF)} ${DV} ${mu} = ${fmt(units)}.`) + res(fmt(units) + ' produits') };
+  }
+  if (d === 2) {
+    const m = mcq(R, units, [Math.round(CF / pv), Math.round(CF / cv), units * 2, Math.round(units * 1.5)], { valid: (v) => Number.isInteger(v) && v > 0 });
+    return { q: P(`Coûts fixes : ${eur(CF)}. Prix de vente : ${eur(pv)} par unité. Coût variable : ${eur(cv)} par unité. Quel est le seuil de rentabilité, en nombre d'unités ?`), ...m, expl: steps(`Marge par unité : ${pv} ${MINUS} ${cv} = ${mu} €.`, `Seuil = ${fmt(CF)} ${DV} ${mu} = ${fmt(units)} unités.`) + res(fmt(units) + ' unités'), trap: `<b>Piège :</b> diviser par le prix de vente (${pv} €) oublie le coût variable.` };
+  }
+  const B = mu * R.int(2, 20) * 10, q = (CF + B) / mu;
+  const m = mcq(R, q, [units, CF / mu + B / pv, q + units, Math.round(B / mu)], { valid: (v) => Number.isInteger(v) && v > 0 });
+  return { q: P(`Coûts fixes : ${eur(CF)}. Prix de vente : ${eur(pv)} par unité. Coût variable : ${eur(cv)} par unité. Combien d'unités faut-il vendre pour réaliser un bénéfice de ${eur(B)} ?`), ...m, expl: steps(`Marge par unité : ${pv} ${MINUS} ${cv} = ${mu} €.`, `Il faut couvrir les coûts fixes ET dégager le bénéfice : ${fmt(CF)} + ${fmt(B)} = ${fmt(CF + B)} €.`, `${fmt(CF + B)} ${DV} ${mu} = ${fmt(q)} unités.`) + res(fmt(q) + ' unités') };
+});
+gen('com.benef', { sub: 'calcul', ch: 'com', name: 'Coûts et bénéfice', target: 60 }, (R, d) => {
+  const q = R.int(5, 40) * 10, cv = R.pick([6, 8, 12, 15, 18, 25]), pv = cv + R.pick([4, 5, 7, 10, 12]), CF = R.int(5, 40) * 100;
+  const ben = q * (pv - cv) - CF;
+  if (d === 1) {
+    const ca = q * pv, ct = CF + q * cv;
+    const m = mcq(R, ben, [ca - CF, ca - q * cv, ct - ca, ben + CF / 2], { positive: false, render: eur });
+    return { q: P(`Une entreprise vend ${fmt(q)} unités à ${eur(pv)}. Ses coûts fixes sont de ${eur(CF)} et chaque unité lui coûte ${eur(cv)} à produire. Quel est son bénéfice ?`), ...m, expl: steps(`CA = ${fmt(q)} ${X} ${pv} = ${eur(ca)}.`, `Coûts totaux = ${fmt(CF)} + ${fmt(q)} ${X} ${cv} = ${eur(ct)}.`, `Bénéfice = ${fmt(ca)} ${MINUS} ${fmt(ct)} = ${eur(ben)}.`) + res(eur(ben)) };
+  }
+  const target = R.int(2, 20) * 100, needPV = round(cv + (CF + target) / q, 2);
+  const m = mcq(R, needPV, [round((CF + target) / q, 2), round(cv + CF / q, 2), round(needPV + 1, 2), round(cv + target / q, 2)], { render: eur2 });
+  return { q: P(`Une entreprise prévoit de vendre ${fmt(q)} unités. Coûts fixes : ${eur(CF)} ; coût variable : ${eur(cv)} par unité. À quel prix doit-elle vendre pour faire un bénéfice de ${eur(target)} ?`), ...m, expl: steps(`Il faut couvrir ${fmt(CF)} + ${fmt(target)} = ${fmt(CF + target)} € en plus des coûts variables.`, `Par unité : ${fmt(CF + target)} ${DV} ${fmt(q)} = ${eur2((CF + target) / q)}.`, `Prix = ${cv} + ${fmt(round((CF + target) / q, 2))} = ${eur2(needPV)}.`) + res(eur2(needPV)) };
+});
+
 /* ---- 35-drills.js ---- */
 /* ===== Calcul mental : séries chronométrées à réponse tapée ===== */
 function drill(id, meta, make) { TM.drills[id] = Object.assign({ id, sub: 'calcul', kb: 'num', make }, meta); }
@@ -2485,6 +2585,312 @@ drill('dr.suites', { name: 'Termes suivants', desc: 'Repérer l\'écart en un co
   const a = R.int(1, 5), b = R.int(1, 5); const s = [a, b]; for (let i = 2; i < 6; i++) s.push(s[i - 1] + s[i - 2]); return { p: s.slice(0, 5).join(', ') + ', ?', a: cn(s[5]) };
 });
 
+/* ---- 36-guides.js ---- */
+/* ===== Exercices guidés pas à pas (calcul) ===== */
+TM.guides = {};
+function guide(id, meta, make) { TM.guides[id] = Object.assign({ id, make }, meta); }
+const guidesOf = (chId) => Object.values(TM.guides).filter((g) => g.ch === chId);
+function parseNum(s) {
+  const t = normAns(s);
+  if (!t) return NaN;
+  if (t.includes('/')) { const [a, b] = t.split('/'); const x = parseFloat(a.replace(',', '.')), y = parseFloat((b || '').replace(',', '.')); return y ? x / y : NaN; }
+  return /^-?\d+(,\d+)?$/.test(t) ? Number(t.replace(',', '.')) : NaN;
+}
+function sameAns(inp, exp) {
+  const a = parseNum(inp), b = parseNum(exp);
+  if (isFinite(a) && isFinite(b)) return Math.abs(a - b) < 1e-6 * Math.max(1, Math.abs(b));
+  return normAns(inp) === normAns(exp);
+}
+const divHint = (d, t) => (Number.isInteger(t * 4) && !Number.isInteger(t) ? `Pour diviser par ${fmt(t)}, multiplie les deux nombres par 4 : ${fmt(d)} ${DV} ${fmt(t)} = ${fmt(d * 4)} ${DV} ${fmt(t * 4)}.` : `Pose la division ${fmt(d)} ${DV} ${fmt(t)}.`);
+
+guide('g.vit.duree', { ch: 'vit', name: 'Convertir une durée puis trouver la vitesse' }, (R) => {
+  const [h, m] = R.pick([[1, 15], [1, 30], [0, 45], [2, 15], [1, 45], [2, 30], [0, 30], [3, 15]]);
+  const t = h + m / 60;
+  let v, d; do { v = R.int(4, 26) * 5; d = round(v * t, 6); } while (!Number.isInteger(d));
+  const who = v <= 35 ? 'Un cycliste' : 'Une voiture';
+  return {
+    q: `${who} parcourt ${unit(d, 'km')} en ${hm(t)}. Quelle est sa vitesse moyenne ?`,
+    steps: [
+      { p: `Convertis ${m} minutes en heure décimale (minutes ${DV} 60).`, a: cn(m / 60), u: 'h', hint: `${m} ${DV} 60 = ${F(m, 60)} = ${frH(m, 60)} d'heure. Écris-le en décimal.` },
+      h ? { p: `Donc ${hm(t)} correspond à combien d'heures ?`, a: cn(t), u: 'h', hint: `${h} h + ${fmt(m / 60)} h.` } : null,
+      { p: `Vitesse = distance ${DV} temps. Calcule ${fmt(d)} ${DV} ${fmt(t)}.`, a: cn(v), u: 'km/h', hint: divHint(d, t) },
+    ].filter(Boolean),
+    end: `La vitesse moyenne est de <b>${v} km/h</b>. À retenir : ${hm(t)} = <b>${fmt(t)} h</b>, et non ${h},${String(m).padStart(2, '0')} h.`,
+  };
+});
+guide('g.vit.moy', { ch: 'vit', name: 'Vitesse moyenne d\'un aller-retour' }, (R) => {
+  const [v1, v2] = R.shuffle(R.pick([[60, 40], [90, 60], [120, 80], [30, 20], [100, 150], [50, 75], [45, 90], [60, 90]]));
+  const D = lcm(v1, v2), t1 = D / v1, t2 = D / v2, T = t1 + t2, vm = 2 * D / T;
+  return {
+    q: `Un automobiliste fait l'aller (${D} km) à ${v1} km/h, puis le retour (${D} km) à ${v2} km/h. Quelle est sa vitesse moyenne sur l'aller-retour ?`,
+    steps: [
+      { p: `Durée de l'aller : ${D} ${DV} ${v1} = ?`, a: cn(t1), u: 'h', hint: 'temps = distance ÷ vitesse' },
+      { p: `Durée du retour : ${D} ${DV} ${v2} = ?`, a: cn(t2), u: 'h', hint: 'temps = distance ÷ vitesse' },
+      { p: 'Distance totale parcourue (aller + retour) ?', a: cn(2 * D), u: 'km', hint: `${D} + ${D}` },
+      { p: 'Durée totale ?', a: cn(T), u: 'h', hint: `${t1} + ${t2}` },
+      { p: 'Vitesse moyenne = distance totale ÷ durée totale = ?', a: cn(vm), u: 'km/h', hint: `${2 * D} ${DV} ${T}` },
+    ],
+    end: `La vitesse moyenne est de <b>${vm} km/h</b>, et non ${fmt((v1 + v2) / 2)} km/h. On passe plus de temps à la vitesse la plus lente, donc la moyenne penche de son côté. Raccourci : ${F(`2 ${X} ${v1} ${X} ${v2}`, `${v1} + ${v2}`)} = ${vm}.`,
+  };
+});
+guide('g.vit.croise', { ch: 'vit', name: 'Deux véhicules qui se croisent' }, (R) => {
+  const t = R.pick([1.5, 2, 2.5, 3, 0.5, 1]);
+  let v1, v2; do { v1 = R.int(4, 12) * 10; v2 = R.int(4, 12) * 10; } while (v1 === v2 || !Number.isInteger(round((v1 + v2) * t, 6)));
+  const D = (v1 + v2) * t;
+  return {
+    q: `A et B sont distantes de ${unit(D, 'km')}. Une voiture part de A vers B à ${v1} km/h ; au même moment, une autre part de B vers A à ${v2} km/h. À quelle distance de A se croisent-elles ?`,
+    steps: [
+      { p: 'De combien de kilomètres se rapprochent-elles chaque heure ?', a: cn(v1 + v2), u: 'km/h', hint: 'Elles roulent l\'une vers l\'autre : on additionne les vitesses.' },
+      { p: `Au bout de combien d'heures se croisent-elles ? (${fmt(D)} ${DV} ${v1 + v2})`, a: cn(t), u: 'h', hint: 'temps = distance ÷ vitesse de rapprochement' },
+      { p: `Quelle distance a parcourue la voiture partie de A ? (${v1} ${X} ${fmt(t)})`, a: cn(v1 * t), u: 'km', hint: 'distance = vitesse × temps' },
+    ],
+    end: `Elles se croisent à <b>${fmt(v1 * t)} km de A</b>, au bout de ${hm(t)}. Vérification : l'autre a parcouru ${v2} ${X} ${fmt(t)} = ${fmt(v2 * t)} km, et ${fmt(v1 * t)} + ${fmt(v2 * t)} = ${fmt(D)} km ✔.`,
+  };
+});
+guide('g.vit.rattrape', { ch: 'vit', name: 'Rattraper un véhicule' }, (R) => {
+  const [v1, v2, lag] = R.pick([[60, 90, 1], [40, 60, 0.5], [80, 120, 1], [50, 75, 1], [90, 120, 0.5], [15, 20, 1], [70, 105, 1]]);
+  const adv = v1 * lag, tc = adv / (v2 - v1);
+  return {
+    q: `Une voiture part à ${v1} km/h. ${hm(lag)} plus tard, une seconde voiture part du même endroit, sur la même route, à ${v2} km/h. Au bout de combien de temps (après son départ) la seconde rattrape-t-elle la première ?`,
+    steps: [
+      { p: `Quelle avance a la première voiture au départ de la seconde ? (${v1} ${X} ${fmt(lag)})`, a: cn(adv), u: 'km', hint: 'distance = vitesse × temps' },
+      { p: 'De combien de kilomètres la seconde se rapproche-t-elle chaque heure ?', a: cn(v2 - v1), u: 'km/h', hint: 'Même sens : on soustrait les vitesses.' },
+      { p: `Temps pour combler l'avance, en heures (${fmt(adv)} ${DV} ${v2 - v1}) ?`, a: cn(tc), u: 'h', hint: 'temps = avance ÷ vitesse de rapprochement' },
+      { p: 'Ce temps, en minutes ?', a: cn(tc * 60), u: 'min', hint: `${fmt(tc)} ${X} 60` },
+    ],
+    end: `La seconde voiture rattrape la première au bout de <b>${hm(tc)}</b>.`,
+  };
+});
+guide('g.pct.evol', { ch: 'pct', name: 'Calculer un taux d\'évolution' }, (R) => {
+  const t = R.pick([10, 20, 25, 15, 40, -10, -20, -25, -15, -40, 50]);
+  let V1; do { V1 = R.int(2, 40) * 10; } while (!Number.isInteger(round(V1 * (1 + t / 100), 6)));
+  const V2 = round(V1 * (1 + t / 100), 4);
+  return {
+    q: `Le prix d'un abonnement passe de ${eur(V1)} à ${eur(V2)}. Quel est le taux d'évolution ?`,
+    steps: [
+      { p: 'Quelle est la variation (prix final − prix initial) ?', a: cn(V2 - V1), u: '€', hint: `${fmt(V2)} ${MINUS} ${fmt(V1)} (le résultat peut être négatif)` },
+      { p: `Divise cette variation par le prix de DÉPART (${fmt(V1)}).`, a: cn(round((V2 - V1) / V1, 6)), u: '', hint: `${fmt(V2 - V1)} ${DV} ${fmt(V1)}` },
+      { p: 'Exprime ce nombre en pourcentage (× 100).', a: cn(t), u: '%', hint: 'Décale la virgule de 2 rangs vers la droite.' },
+    ],
+    end: `Le taux d'évolution est de <b>${sgnPc(t)}</b>. On divise TOUJOURS par la valeur de départ.`,
+  };
+});
+guide('g.pct.succ', { ch: 'pct', name: 'Enchaîner deux évolutions' }, (R) => {
+  const [t1, t2] = R.pick([[20, -20], [10, 10], [25, -20], [50, -20], [30, -30], [-10, -10], [40, -25], [20, 20]]);
+  const c1 = round(1 + t1 / 100, 4), c2 = round(1 + t2 / 100, 4), c = round(c1 * c2, 6), tot = round((c - 1) * 100, 4);
+  return {
+    q: `Un prix évolue de ${sgnPc(t1)}, puis de ${sgnPc(t2)}. Quelle est l'évolution globale ?`,
+    steps: [
+      { p: `Coefficient multiplicateur de la 1re évolution (${sgnPc(t1)}) ?`, a: cn(c1), u: '', hint: `1 ${t1 > 0 ? '+' : MINUS} ${fmt(Math.abs(t1) / 100)}` },
+      { p: `Coefficient de la 2e évolution (${sgnPc(t2)}) ?`, a: cn(c2), u: '', hint: `1 ${t2 > 0 ? '+' : MINUS} ${fmt(Math.abs(t2) / 100)}` },
+      { p: 'Coefficient global = produit des deux ?', a: cn(c), u: '', hint: `${fmt(c1)} ${X} ${fmt(c2)}` },
+      { p: 'Évolution globale en % ? (tape un nombre négatif pour une baisse)', a: cn(tot), u: '%', hint: `(${fmt(c)} ${MINUS} 1) ${X} 100` },
+    ],
+    end: `L'évolution globale est de <b>${sgnPc(tot)}</b>, et non ${sgnPc(t1 + t2)}. Les pourcentages qui s'enchaînent se MULTIPLIENT.`,
+  };
+});
+guide('g.pct.init', { ch: 'pct', name: 'Retrouver un prix avant remise' }, (R) => {
+  const t = R.pick([10, 20, 25, 40, 30]);
+  let V0; do { V0 = R.int(4, 60) * 10; } while (!Number.isInteger(round(V0 * (1 - t / 100), 6)));
+  const V = round(V0 * (1 - t / 100), 4), c = round(1 - t / 100, 4);
+  return {
+    q: `Après une remise de ${pc(t)}, un manteau coûte ${eur(V)}. Quel était son prix avant la remise ?`,
+    steps: [
+      { p: `Coefficient multiplicateur d'une baisse de ${pc(t)} ?`, a: cn(c), u: '', hint: `1 ${MINUS} ${fmt(t / 100)}` },
+      { p: `Prix initial ${X} ${fmt(c)} = ${fmt(V)}. Donc prix initial = ${fmt(V)} ${DV} ${fmt(c)} = ?`, a: cn(V0), u: '€', hint: `Pour diviser par ${fmt(c)}, multiplie les deux nombres par ${Math.pow(10, decs(c))} : ${fmt(V * Math.pow(10, decs(c)))} ${DV} ${fmt(round(c * Math.pow(10, decs(c)), 6))}.` },
+    ],
+    end: `Le prix initial était de <b>${eur(V0)}</b>. Vérification : ${fmt(V0)} ${X} ${fmt(c)} = ${fmt(V)} ✔. Erreur classique : ${fmt(V)} ${X} ${fmt(1 + t / 100)} = ${fmt(round(V * (1 + t / 100), 2))}, faux !`,
+  };
+});
+guide('g.frac.add', { ch: 'frac', name: 'Additionner deux fractions' }, (R) => {
+  let b, d2; do { b = R.int(2, 9); d2 = R.int(2, 9); } while (b === d2);
+  const cop = (dd) => { let n; do { n = R.int(1, dd - 1); } while (gcd(n, dd) !== 1); return n; };
+  const a = cop(b), c = cop(d2), L = lcm(b, d2), n1 = a * L / b, n2 = c * L / d2, s = new Fr(n1 + n2, L);
+  return {
+    q: `Calcule ${F(a, b)} + ${F(c, d2)}.`,
+    steps: [
+      { p: `Quel est le plus petit multiple commun de ${b} et ${d2} (le dénominateur commun) ?`, a: cn(L), u: '', hint: `Liste les multiples de ${Math.max(b, d2)} : ${[1, 2, 3, 4].map((k) => k * Math.max(b, d2)).join(', ')}… et prends le premier divisible par ${Math.min(b, d2)}.` },
+      { p: `${F(a, b)} = ${F('?', L)} : quel numérateur ?`, a: cn(n1), u: '', hint: `On a multiplié ${b} par ${L / b} : fais pareil avec ${a}.` },
+      { p: `${F(c, d2)} = ${F('?', L)} : quel numérateur ?`, a: cn(n2), u: '', hint: `On a multiplié ${d2} par ${L / d2} : fais pareil avec ${c}.` },
+      { p: `Somme des numérateurs : ${n1} + ${n2} = ?`, a: cn(n1 + n2), u: '', hint: 'On additionne les numérateurs, on garde le dénominateur.' },
+      { p: `Écris le résultat sous forme de fraction simplifiée (touche « / »).`, a: s.txt(), u: '', hint: `${F(n1 + n2, L)} : divise le haut et le bas par ${gcd(n1 + n2, L)}${gcd(n1 + n2, L) === 1 ? ' (elle est déjà simplifiée)' : ''}.` },
+    ],
+    end: `${F(a, b)} + ${F(c, d2)} = ${F(n1, L)} + ${F(n2, L)} = ${s.html()}. Jamais ${F(a + c, b + d2)} !`,
+  };
+});
+guide('g.moy.manque', { ch: 'moy', name: 'Trouver la note manquante' }, (R) => {
+  const n = R.int(3, 4), target = R.int(11, 14);
+  let notes, miss; do { notes = Array.from({ length: n }, () => R.int(7, 18)); miss = target * (n + 1) - notes.reduce((x, y) => x + y, 0); } while (miss < 5 || miss > 20);
+  const S0 = notes.reduce((x, y) => x + y, 0);
+  return {
+    q: `Inès a eu ${notes.join(', ')}. Quelle note doit-elle avoir au prochain devoir pour obtenir exactement ${target} de moyenne ?`,
+    steps: [
+      { p: `Avec ${n + 1} notes, quelle somme faut-il pour avoir ${target} de moyenne ?`, a: cn(target * (n + 1)), u: 'points', hint: `somme = moyenne ${X} nombre de notes = ${target} ${X} ${n + 1}` },
+      { p: 'Quelle est la somme de ses notes actuelles ?', a: cn(S0), u: 'points', hint: notes.join(' + ') },
+      { p: 'Quelle note lui manque-t-il ?', a: cn(miss), u: '', hint: `${target * (n + 1)} ${MINUS} ${S0}` },
+    ],
+    end: `Elle doit avoir <b>${miss}</b>. La clé : <b>somme = moyenne × nombre</b>.`,
+  };
+});
+guide('g.moy.groupes', { ch: 'moy', name: 'Moyenne de deux groupes' }, (R) => {
+  let n1, n2, m1, m2, avg; do { n1 = R.int(5, 25); n2 = R.int(5, 25); m1 = R.int(8, 16); m2 = R.int(8, 16); avg = (n1 * m1 + n2 * m2) / (n1 + n2); } while (m1 === m2 || !Number.isInteger(avg));
+  return {
+    q: `Dans une classe, les ${n1} filles ont ${m1} de moyenne et les ${n2} garçons ont ${m2}. Quelle est la moyenne de la classe ?`,
+    steps: [
+      { p: 'Total des points des filles ?', a: cn(n1 * m1), u: 'points', hint: `${n1} ${X} ${m1}` },
+      { p: 'Total des points des garçons ?', a: cn(n2 * m2), u: 'points', hint: `${n2} ${X} ${m2}` },
+      { p: 'Total des points de la classe ?', a: cn(n1 * m1 + n2 * m2), u: 'points', hint: 'On additionne les deux totaux.' },
+      { p: 'Nombre d\'élèves ?', a: cn(n1 + n2), u: '', hint: `${n1} + ${n2}` },
+      { p: 'Moyenne de la classe ?', a: cn(avg), u: '', hint: `${n1 * m1 + n2 * m2} ${DV} ${n1 + n2}` },
+    ],
+    end: `La moyenne est <b>${avg}</b>, et non ${fmt((m1 + m2) / 2)} : le groupe le plus nombreux pèse plus lourd.`,
+  };
+});
+guide('g.pb.tirage', { ch: 'proba', name: 'Deux tirages sans remise' }, (R) => {
+  const r = R.int(3, 7), b = R.int(2, 6), n = r + b, p = new Fr(r * (r - 1), n * (n - 1));
+  return {
+    q: `Un sac contient ${r} jetons rouges et ${b} jetons bleus. On tire deux jetons, l'un après l'autre, sans remise. Quelle est la probabilité que les deux soient rouges ?`,
+    steps: [
+      { p: 'Probabilité que le 1er jeton soit rouge ? (écris une fraction, touche « / »)', a: `${r}/${n}`, u: '', hint: `cas favorables ÷ cas possibles = ${r} ÷ ${n}` },
+      { p: 'Le 1er était rouge. Probabilité que le 2e soit rouge aussi ?', a: `${r - 1}/${n - 1}`, u: '', hint: `Il reste ${r - 1} rouges sur ${n - 1} jetons.` },
+      { p: 'Probabilité des deux à la suite (on multiplie) ?', a: p.txt(), u: '', hint: `${F(r, n)} ${X} ${F(r - 1, n - 1)} = ${F(r * (r - 1), n * (n - 1))}, puis simplifie.` },
+    ],
+    end: `La probabilité vaut <b>${p.html()}</b>. Sans remise, le 2e tirage a un jeton de moins : les deux fractions changent.`,
+  };
+});
+guide('g.trav.rob', { ch: 'trav', name: 'Deux robinets ensemble' }, (R) => {
+  const [a, b] = R.shuffle(R.pick([[3, 6], [2, 6], [4, 12], [6, 12], [10, 15], [12, 24], [20, 30], [6, 3]]));
+  const s = new Fr(1, a).add(new Fr(1, b)), t = a * b / (a + b);
+  return {
+    q: `Un robinet remplit une cuve en ${a} heures, un autre en ${b} heures. En combien de temps la remplissent-ils ensemble ?`,
+    steps: [
+      { p: 'Quelle fraction de la cuve le 1er robinet remplit-il en 1 heure ?', a: `1/${a}`, u: '', hint: `Il lui faut ${a} heures pour une cuve entière.` },
+      { p: 'Et le 2e robinet, en 1 heure ?', a: `1/${b}`, u: '', hint: `Il lui faut ${b} heures.` },
+      { p: 'Ensemble, quelle fraction de la cuve en 1 heure ?', a: s.txt(), u: '', hint: `${F(1, a)} + ${F(1, b)} : mets au même dénominateur (${lcm(a, b)}).` },
+      { p: 'Combien d\'heures pour remplir la cuve entière ?', a: cn(t), u: 'h', hint: `Si on remplit ${s.html()} par heure, il faut ${s.inv().html()} heures.` },
+    ],
+    end: `Ensemble, il faut <b>${hm(t)}</b>. Formule rapide : ${F(`${a} ${X} ${b}`, `${a} + ${b}`)} = ${fmt(t)}. Toujours moins que le plus rapide seul !`,
+  };
+});
+guide('g.prop.trois', { ch: 'prop', name: 'Règle de trois' }, (R) => {
+  const p = R.pick([1.2, 1.5, 2.4, 1.6, 2.5, 0.8, 3.5]), q1 = R.int(3, 9); let q2; do { q2 = R.int(2, 15); } while (q2 === q1);
+  const t1 = round(p * q1, 2), t2 = round(p * q2, 2);
+  return {
+    q: `${q1} kg de pommes coûtent ${eur2(t1)}. Combien coûtent ${q2} kg ?`,
+    steps: [
+      { p: 'Prix d\'un seul kilo ?', a: cn(p), u: '€', hint: `${fmt(t1)} ${DV} ${q1}` },
+      { p: `Prix de ${q2} kg ?`, a: cn(t2), u: '€', hint: `${q2} ${X} ${fmt(p)}` },
+    ],
+    end: `${q2} kg coûtent <b>${eur2(t2)}</b>. Passer par l'unité est la méthode la plus sûre.`,
+  };
+});
+guide('g.com.marge', { ch: 'com', name: 'Marge, taux de marge et de marque' }, (R) => {
+  const [PA, PV] = R.pick([[80, 100], [120, 150], [50, 100], [40, 100], [50, 80], [100, 160], [80, 200], [200, 250], [25, 40]]);
+  const mg = PV - PA;
+  return {
+    q: `Un article acheté ${eur(PA)} est revendu ${eur(PV)} hors taxes. Calcule la marge, le taux de marge et le taux de marque.`,
+    steps: [
+      { p: 'Marge = prix de vente − prix d\'achat = ?', a: cn(mg), u: '€', hint: `${PV} ${MINUS} ${PA}` },
+      { p: 'Taux de marge = marge ÷ prix d\'ACHAT, en % ?', a: cn(round(mg / PA * 100, 4)), u: '%', hint: `${mg} ${DV} ${PA}, puis × 100` },
+      { p: 'Taux de marque = marge ÷ prix de VENTE, en % ?', a: cn(round(mg / PV * 100, 4)), u: '%', hint: `${mg} ${DV} ${PV}, puis × 100` },
+    ],
+    end: `Marge ${mg} € · taux de marge <b>${pc(round(mg / PA * 100, 2))}</b> · taux de marque <b>${pc(round(mg / PV * 100, 2))}</b>. Même marge, deux taux différents selon le prix de référence.`,
+  };
+});
+
+/* ---- 37-cards.js ---- */
+/* ===== Fiches mémo (cartes recto/verso, répétition espacée) ===== */
+TM.decks = [];
+function deck(id, sub, name, desc, cards) { TM.decks.push({ id, sub, name, desc, cards: cards.map(([f, b], i) => ({ id: id + ':' + i, f, b })) }); }
+
+deck('m.frac', 'calcul', 'Fractions, décimaux, %', 'Le tableau de conversion à connaître par cœur', [
+  [F(1, 2), '0,5 = 50 %'], [F(1, 4), '0,25 = 25 %'], [F(3, 4), '0,75 = 75 %'], [F(1, 5), '0,2 = 20 %'], [F(2, 5), '0,4 = 40 %'],
+  [F(3, 5), '0,6 = 60 %'], [F(4, 5), '0,8 = 80 %'], [F(1, 8), '0,125 = 12,5 %'], [F(3, 8), '0,375 = 37,5 %'], [F(5, 8), '0,625 = 62,5 %'],
+  [F(7, 8), '0,875 = 87,5 %'], [F(1, 3), '≈ 0,333 = 33,3 %'], [F(2, 3), '≈ 0,667 = 66,7 %'], [F(1, 6), '≈ 0,167 = 16,7 %'], [F(1, 9), '≈ 0,111 = 11,1 %'],
+  [F(1, 10), '0,1 = 10 %'], [F(1, 20), '0,05 = 5 %'], [F(1, 25), '0,04 = 4 %'], [F(1, 40), '0,025 = 2,5 %'], [F(1, 50), '0,02 = 2 %'],
+  ['12,5 %', F(1, 8)], ['37,5 %', F(3, 8)], ['0,75', F(3, 4)], ['35 %', F(7, 20)], ['0,04', F(1, 25)],
+]);
+deck('m.carres', 'calcul', 'Carrés, puissances, racines', 'Gagne des secondes sur chaque calcul', [
+  ['11²', '121'], ['12²', '144'], ['13²', '169'], ['14²', '196'], ['15²', '225'], ['16²', '256'], ['17²', '289'], ['18²', '324'], ['19²', '361'], ['21²', '441'], ['24²', '576'], ['25²', '625'],
+  [PW(2, 5), '32'], [PW(2, 6), '64'], [PW(2, 7), '128'], [PW(2, 8), '256'], [PW(2, 9), '512'], [PW(2, 10), '1 024'], [PW(3, 3), '27'], [PW(3, 4), '81'], [PW(3, 5), '243'], [PW(5, 3), '125'], [PW(5, 4), '625'],
+  [SQ(169), '13'], [SQ(256), '16'], [SQ(324), '18'], [SQ(0.49).replace('0.49', '0,49'), '0,7'], [SQ(2) + ' ≈ ?', '1,41'], [SQ(3) + ' ≈ ?', '1,73'],
+]);
+deck('m.formules', 'calcul', 'Formules essentielles', 'Toutes les formules du calcul en une seule pile', [
+  ['Vitesse', 'v = distance ÷ temps'], ['Distance', 'd = vitesse × temps'], ['Temps', 't = distance ÷ vitesse'],
+  ['Vitesse moyenne d\'un aller-retour (v₁, v₂)', F('2 × v₁ × v₂', 'v₁ + v₂') + ' (jamais la moyenne simple)'], ['km/h → m/s', 'diviser par 3,6'],
+  ['Aire d\'un triangle', F('base × hauteur', 2)], ['Aire d\'un trapèze', F('(B + b) × h', 2)], ['Aire d\'un disque', 'π × r²'], ['Périmètre d\'un cercle', '2 × π × r'],
+  ['Pythagore', 'hypoténuse² = a² + b²'], ['Triplets de Pythagore', '3-4-5 · 5-12-13 · 8-15-17 · 7-24-25'], ['Diagonale d\'un carré de côté a', 'a' + SQ(2)], ['Volume d\'un cylindre', 'π × r² × h'],
+  ['Somme 1 + 2 + … + n', F('n × (n + 1)', 2)], ['Nombre de termes de a à b (pas r)', F('b − a', 'r') + ' + 1'], ['Intérêts composés', 'C × (1 + t)<sup>n</sup>'],
+  ['Hausse de t %', '× (1 + t/100)'], ['Baisse de t %', '× (1 − t/100)'], ['Taux d\'évolution', F('final − initial', 'initial')],
+  ['Moyenne', 'somme ÷ nombre, donc somme = moyenne × nombre'], ['Deux robinets (a h et b h)', F('a × b', 'a + b') + ' heures'], ['Produit pur d\'un mélange', 'volume × concentration'],
+  ['P(au moins un)', '1 − P(aucun)'], ['Choisir 2 parmi n', F('n × (n − 1)', 2)], ['Ranger n objets', 'n! = n × (n − 1) × … × 1'],
+  ['PGCD ou PPCM ? Bus qui repartent ensemble', 'PPCM'], ['PGCD ou PPCM ? Bouquets identiques', 'PGCD'], ['Seuil de rentabilité', F('coûts fixes', 'PV − CV unitaire')], ['Taux de marge / de marque', 'marge ÷ prix d\'achat / marge ÷ prix de vente'],
+]);
+deck('m.pct', 'calcul', 'Pourcentages réflexes', 'Les évolutions qu\'il faut reconnaître sans calculer', [
+  ['+20 % puis −20 %', '−4 % (1,2 × 0,8 = 0,96)'], ['+10 % puis +10 %', '+21 %'], ['+25 % puis −20 %', '0 % (1,25 × 0,8 = 1)'], ['+50 % puis −50 %', '−25 %'], ['−50 % puis +100 %', '0 %'],
+  ['Pour annuler +25 %', '−20 %'], ['Pour annuler −20 %', '+25 %'], ['Pour annuler +50 %', '≈ −33,3 %'], ['Pour annuler −50 %', '+100 %'], ['Pour annuler +100 %', '−50 %'],
+  ['De 8 % à 10 %', '+2 points, soit +25 %'], ['TTC → HT (TVA 20 %)', 'diviser par 1,2'], ['15 % de N', '10 % + 5 % (la moitié de 10 %)'], ['8 % de 50', '= 50 % de 8 = 4'], ['Après −20 %, prix 64 €. Avant ?', '64 ÷ 0,8 = 80 €'],
+]);
+deck('m.durees', 'calcul', 'Durées et vitesses', 'Heures décimales et conversions express', [
+  ['0,1 h', '6 min'], ['0,2 h', '12 min'], ['0,25 h', '15 min'], ['0,4 h', '24 min'], ['0,75 h', '45 min'], ['1,2 h', '1 h 12'], ['2,4 h', '2 h 24'],
+  ['20 min', F(1, 3) + ' h'], ['40 min', F(2, 3) + ' h'], ['1 h 15', '1,25 h'], ['1 h 45', '1,75 h'], ['36 min', '0,6 h'],
+  ['60 km/h', '1 km par minute'], ['90 km/h', '1,5 km par minute'], ['120 km/h', '2 km par minute'], ['72 km/h', '20 m/s'], ['90 km/h en m/s', '25 m/s'], ['36 km/h', '10 m/s'],
+]);
+deck('m.cm', 'cm', 'Conditions minimales', 'Les 5 réponses et les pièges', [
+  ['Réponse A', '(1) seule suffit, pas (2) seule'], ['Réponse B', '(2) seule suffit, pas (1) seule'], ['Réponse C', 'Les deux ensemble, aucune seule'], ['Réponse D', 'Chacune suffit seule'], ['Réponse E', 'Même ensemble, ça ne suffit pas'],
+  ['Ordre de la méthode', '(1) seule → (2) seule → ensemble'], ['x² = 16 suffit-il pour x ?', 'Non : x = 4 ou x = −4'], ['« x + y = 10 » et « 2x + 2y = 20 »', 'Une seule équation : ensemble, ça ne suffit pas'],
+  ['Pour connaître a/b', 'Une relation comme 2a = 3b suffit, pas besoin de a et b'], ['Question oui / non', 'Un « non » certain est une réponse : la condition suffit'], ['Faut-il finir le calcul ?', 'Non, savoir qu\'on PEUT trouver suffit'], ['Effectifs inconnus, proportion connue', 'Suffit pour une moyenne pondérée'],
+]);
+deck('m.log', 'logique', 'Logique : repères', 'Rangs des lettres et schémas fréquents', [
+  ['E', '5'], ['J', '10'], ['O', '15'], ['T', '20'], ['Y', '25'], ['H', '8'], ['M', '13'], ['R', '18'], ['W', '23'], ['K', '11'], ['P', '16'], ['U', '21'],
+  ['Dominos : après 6 ?', '0 (on compte modulo 7)'], ['Cartes : valeurs', 'As 1 · Valet 11 · Dame 12 · Roi 13'], ['Suite bloquée ?', 'Regarde une case sur deux'], ['2, 3, 5, 8, 13…', 'Fibonacci : somme des deux précédents'], ['1, 3, 7, 15, 31…', '× 2 + 1'], ['3, 5, 9, 15, 23…', 'Écarts +2, +4, +6, +8 → 33'],
+]);
+deck('m.ra', 'ra', 'Logique et sophismes', 'Raisonnement & Argumentation', [
+  ['« Si A alors B » : contraposée', 'Si non B, alors non A (toujours vraie)'], ['« Si A alors B » : réciproque', 'Si B alors A (pas forcément vraie)'], ['Condition nécessaire', 'Sans elle, impossible ; mais elle ne garantit rien'], ['Condition suffisante', 'Elle garantit le résultat'],
+  ['« Tous les A sont B »', 'Ne veut pas dire que tous les B sont A'], ['Hypothèse implicite : le test', 'Nier la réponse : si l\'argument s\'effondre, c\'est la bonne'],
+  ['Corrélation ≠ causalité', 'Deux choses liées n\'impliquent pas que l\'une cause l\'autre'], ['Généralisation hâtive', 'Conclure à partir de trop peu de cas'], ['Faux dilemme', 'Présenter deux options comme les seules possibles'], ['Pente glissante', 'Enchaîner des conséquences de plus en plus graves sans preuve'],
+  ['Ad hominem', 'Attaquer la personne au lieu de l\'argument'], ['Appel à l\'autorité', 'S\'appuyer sur quelqu\'un qui n\'est pas compétent'], ['Raisonnement circulaire', 'Utiliser la conclusion comme preuve'], ['Biais de sélection', 'Comparer des groupes qui n\'étaient pas comparables au départ'], ['Homme de paille', 'Déformer la position de l\'autre pour la réfuter plus facilement'], ['« Seuls les X ont Y »', 'Avoir Y implique être X (condition nécessaire)'],
+]);
+deck('m.paro', 'expr', 'Paronymes', 'Les mots qui se ressemblent', [
+  ['éminent / imminent', 'remarquable / qui va arriver bientôt'], ['effraction / infraction', 'entrée en forçant / violation d\'une règle'], ['conjecture / conjoncture', 'hypothèse / situation du moment'], ['perpétrer / perpétuer', 'commettre / faire durer'],
+  ['prodige / prodigue', 'surdoué, miracle / dépensier'], ['recouvrer / recouvrir', 'retrouver / couvrir entièrement'], ['acception / acceptation', 'sens d\'un mot / fait d\'accepter'], ['partial / partiel', 'injuste / incomplet'],
+  ['opprimer / oppresser', 'tyranniser / gêner la respiration'], ['émigrer / immigrer', 'quitter son pays / s\'installer dans un pays'], ['compréhensif / compréhensible', 'indulgent / qu\'on peut comprendre'], ['avènement / événement', 'arrivée au pouvoir / fait marquant'],
+  ['collision / collusion', 'choc / entente secrète'], ['inclinaison / inclination', 'pente / penchant, goût'], ['allocution / allocation', 'discours / somme versée'], ['éruption / irruption', 'sortie brutale (volcan) / entrée brutale'],
+]);
+deck('m.vocab', 'expr', 'Vocabulaire soutenu', 'Les mots qui tombent', [
+  ['laconique', 'bref, concis'], ['prolixe', 'trop long, bavard'], ['éphémère', 'qui dure peu'], ['pérenne', 'durable'], ['fortuit', 'dû au hasard'], ['vétuste', 'abîmé par le temps'], ['sibyllin', 'obscur, énigmatique'],
+  ['pusillanime', 'qui manque de courage'], ['acerbe', 'mordant, agressif'], ['exhaustif', 'complet'], ['idoine', 'approprié'], ['véhément', 'fougueux, emporté'], ['ubuesque', 'absurde et grotesque'], ['obsolète', 'dépassé'],
+  ['prosaïque', 'banal, terre à terre'], ['dithyrambique', 'extrêmement élogieux'], ['gageure', 'action très difficile à réussir'], ['abscons', 'difficile à comprendre'], ['inique', 'très injuste'], ['probe', 'honnête, intègre'],
+]);
+deck('m.regles', 'expr', 'Règles de grammaire', 'Accords, modes et constructions', [
+  ['Participe passé avec avoir', 'Accord avec le COD seulement s\'il est AVANT'], ['« Elles se sont lavé les mains »', 'Pas d\'accord : le COD (les mains) est après'], ['« Ils se sont parlé »', 'Pas d\'accord : on parle À quelqu\'un (COI)'], ['« Fait » + infinitif', 'Toujours invariable'],
+  ['Après « bien que »', 'Subjonctif'], ['Après « après que »', 'Indicatif'], ['Après « avant que »', 'Subjonctif'], ['« Si j\'… su »', 'avais (jamais de conditionnel après si)'],
+  ['Se rappeler / se souvenir', 'se rappeler QUELQUE CHOSE / se souvenir DE quelque chose'], ['Pallier', 'pallier un problème (sans « à »)'], ['« Malgré que »', 'Fautif : écrire « bien que »'], ['Des chaussures marron', 'Couleur issue d\'un nom : invariable'],
+  ['« Tout » + adjectif féminin à consonne', 's\'accorde : elles sont toutes honteuses'], ['Midi et demi / une heure et demie', 'demi s\'accorde avec le nom qui précède'], ['Je vous … gré', 'saurais (verbe savoir)'], ['Davantage / d\'avantage', 'davantage = plus'],
+]);
+function deckStats(dk) {
+  const C = Store.S.cards || {}, now = Date.now();
+  let seen = 0, mastered = 0, due = 0;
+  dk.cards.forEach((c) => { const s = C[c.id]; if (s) { seen++; if (s.box >= 4) mastered++; if (s.due <= now) due++; } });
+  return { seen, mastered, due, total: dk.cards.length, fresh: dk.cards.length - seen };
+}
+function cardQueue(deckIds, max = 15) {
+  const C = Store.S.cards || {}, now = Date.now();
+  const decks = TM.decks.filter((d) => !deckIds || deckIds.includes(d.id));
+  const all = [].concat(...decks.map((d) => d.cards.map((c) => Object.assign({ deck: d }, c))));
+  const due = all.filter((c) => C[c.id] && C[c.id].due <= now).sort((a, b) => C[a.id].due - C[b.id].due);
+  const fresh = all.filter((c) => !C[c.id]);
+  const R = makeRng(newSeed());
+  return due.concat(R.shuffle(fresh)).slice(0, max);
+}
+function rateCard(id, knew) {
+  const C = Store.S.cards || (Store.S.cards = {});
+  const s = C[id] || { box: 0, due: 0 };
+  s.box = knew ? Math.min(5, s.box + 1) : 1;
+  s.due = Date.now() + (knew ? [0, 1, 3, 7, 16, 35][s.box] * DAY_MS : 10 * 60000);
+  C[id] = s;
+}
+
 /* ---- 40-cm.js ---- */
 /* ===== CONDITIONS MINIMALES ===== */
 chapter({
@@ -2573,8 +2979,9 @@ gen('cm.rect', { sub: 'cm', ch: 'cm-methode', name: 'Géométrie : aire d\'un re
 });
 gen('cm.moy', { sub: 'cm', ch: 'cm-methode', name: 'Moyennes', target: 75, diffs: [2, 3] }, (R) => {
   const n = R.int(12, 30), avg = R.int(9, 15);
-  const v = cmPick(R, ['C', 'C2', 'E', 'D', 'A']);
+  const v = cmPick(R, ['C', 'C2', 'E', 'D', 'A', 'B']);
   const Q = 'Quelle est la moyenne de cette classe au dernier devoir ?';
+  if (v === 'B') return cmQ(Q, `La moitié des élèves a eu plus de ${avg}.`, `Les ${n} élèves ont totalisé ${n * avg} points.`, 'B', `${KO}.`, `${n * avg} ${DV} ${n} = ${avg} : ${OK}.`);
   if (v === 'C') return cmQ(Q, `La somme de toutes les notes vaut ${n * avg}.`, `La classe compte ${n} élèves.`, 'C', `${KO} (combien d'élèves ?).`, `${KO}.`, `${n * avg} ${DV} ${n} = ${avg} : ça ${OK}.`);
   if (v === 'C2') return cmQ(Q, 'Les filles ont 14 de moyenne et les garçons 11.', 'Il y a deux fois plus de filles que de garçons.', 'C', `${KO} (tout dépend des effectifs).`, `${KO}.`, `sur 3 élèves, 2 filles et 1 garçon : (2 × 14 + 11) ÷ 3 = 13. Pas besoin des effectifs exacts : ça ${OK}.`, '<b>Astuce :</b> une proportion suffit pour une moyenne pondérée.');
   if (v === 'E') return cmQ(Q, 'Les filles ont 14 de moyenne et les garçons 11.', `La classe compte ${n} élèves.`, 'E', `${KO}.`, `${KO}.`, `on ne sait pas combien il y a de filles : ${KO}.`);
@@ -2583,8 +2990,9 @@ gen('cm.moy', { sub: 'cm', ch: 'cm-methode', name: 'Moyennes', target: 75, diffs
 });
 gen('cm.age', { sub: 'cm', ch: 'cm-methode', name: 'Âges', target: 70, diffs: [1, 2] }, (R) => {
   const p = R.int(20, 40), m = p - R.int(2, 8);
-  const v = cmPick(R, ['A', 'C', 'E', 'B']);
+  const v = cmPick(R, ['A', 'C', 'E', 'B', 'D']);
   const Q = 'Quel âge a Paul ?';
+  if (v === 'D') { const dad = p + R.int(24, 34), k = R.int(3, 12); return cmQ(Q, `Paul a ${dad - p} ans de moins que son père, qui a ${dad} ans.`, `Dans ${k} ans, Paul aura ${p + k} ans.`, 'D', `${dad} ${MINUS} ${dad - p} = ${p} : ${OK}.`, `${p + k} ${MINUS} ${k} = ${p} : ${OK}.`); }
   if (v === 'A') {
     const back = R.int(5, 12), fwd = p - 2 * back;
     if (fwd > 0) return cmQ(Q, `Dans ${fwd} ans, Paul aura le double de l'âge qu'il avait il y a ${back} ans.`, 'Paul est plus âgé que Marie.', 'A', `p + ${fwd} = 2(p ${MINUS} ${back}) → p = ${fwd} + ${2 * back} = ${p} : ${OK}.`, `${KO}.`);
@@ -2606,8 +3014,9 @@ gen('cm.ineq', { sub: 'cm', ch: 'cm-methode', name: 'Inégalités : x > y ?', ta
 });
 gen('cm.vit', { sub: 'cm', ch: 'cm-methode', name: 'Vitesses et distances', target: 75 }, (R, d) => {
   const v0 = R.pick([60, 80, 90, 100, 120]), t0 = R.pick([1.5, 2, 2.5, 3]);
-  const v = cmPick(R, d === 1 ? ['C', 'D'] : ['C', 'A', 'E', 'D']);
+  const v = cmPick(R, d === 1 ? ['C', 'D'] : ['C', 'A', 'E', 'D', 'B']);
   const Q = 'Quelle est la distance entre les villes A et B ?';
+  if (v === 'B') { const [a, b, dd] = R.pick([[60, 90, 180], [40, 60, 120], [80, 120, 240], [50, 75, 150]]); return cmQ(Q, 'Le trajet dure moins de 3 heures en voiture.', `À ${a} km/h, le trajet dure 1 h de plus qu'à ${b} km/h.`, 'B', `${KO}.`, `${F('d', a)} ${MINUS} ${F('d', b)} = 1 donne une seule valeur, d = ${dd} km : ${OK}.`); }
   if (v === 'C') return cmQ(Q, `Un train relie A à B en ${hm(t0)}.`, `Ce train roule à ${unit(v0, 'km/h')} de moyenne.`, 'C', `${KO} (vitesse inconnue).`, `${KO} (durée inconnue).`, `d = ${v0} ${X} ${fmt(t0)} = ${fmt(v0 * t0)} km : ça ${OK}.`);
   if (v === 'A') { const [a, b, dd] = R.pick([[60, 90, 180], [40, 60, 120], [80, 120, 240], [50, 75, 150]]); return cmQ(Q, `À ${a} km/h, le trajet dure 1 h de plus qu'à ${b} km/h.`, 'Le trajet dure moins de 3 heures en voiture.', 'A', `${F('d', a)} ${MINUS} ${F('d', b)} = 1 donne une seule valeur, d = ${dd} km : ${OK}.`, `${KO}.`, null, '<b>Rappel :</b> une équation à une inconnue suffit, inutile de la résoudre.'); }
   if (v === 'E') return cmQ(Q, `Une voiture fait le trajet à ${unit(v0, 'km/h')}.`, 'Un camion met 30 minutes de plus que la voiture.', 'E', `${KO}.`, `${KO}.`, `il manque la vitesse du camion (ou une durée) : ${KO}.`);
@@ -2625,8 +3034,10 @@ gen('cm.div', { sub: 'cm', ch: 'cm-methode', name: 'Divisibilité', target: 65, 
 });
 gen('cm.effectif', { sub: 'cm', ch: 'cm-methode', name: 'Effectifs et proportions', target: 70, diffs: [1, 2] }, (R) => {
   const T = R.pick([20, 25, 30, 40, 50]), pf = R.pick([20, 40, 60]), f = T * pf / 100, g = T - f;
-  const v = cmPick(R, ['C', 'C2', 'E', 'A']);
+  const v = cmPick(R, ['C', 'C2', 'E', 'A', 'B', 'D']);
   const Q = 'Combien d\'élèves compte cette classe ?';
+  if (v === 'B') { const k = R.int(2, 6); return cmQ(Q, 'Il y a plus de filles que de garçons.', `Si ${k} élèves partaient, il en resterait ${T - k}.`, 'B', `${KO}.`, `${T - k} + ${k} = ${T} : ${OK}.`); }
+  if (v === 'D') { const k = R.int(2, 6); return cmQ(Q, `Si ${k} élèves partaient, il en resterait ${T - k}.`, `Les ${f} filles représentent ${pc(pf)} de la classe.`, 'D', `${T - k} + ${k} = ${T} : ${OK}.`, `${f} ${DV} ${fmt(pf / 100)} = ${T} : ${OK}.`); }
   if (v === 'C') return cmQ(Q, `Il y a ${f} filles.`, `Les filles représentent ${pc(pf)} de la classe.`, 'C', `${KO}.`, `${KO}.`, `${f} ${DV} ${fmt(pf / 100)} = ${T} : ça ${OK}.`);
   if (v === 'C2' && g !== f) { const dlt = Math.abs(g - f); return cmQ(Q, `Il y a ${dlt} ${g > f ? 'garçons de plus que de filles' : 'filles de plus que de garçons'}.`, `Les garçons représentent ${pc(100 - pf)} de la classe.`, 'C', `${KO}.`, `${KO}.`, `l'écart de ${dlt} élèves représente ${pc(Math.abs(100 - 2 * pf))} de la classe → ${dlt} ${DV} ${fmt(Math.abs(100 - 2 * pf) / 100)} = ${T} : ça ${OK}.`); }
   if (v === 'E') return cmQ(Q, `Les filles représentent ${pc(pf)} de la classe.`, `Les garçons représentent ${pc(100 - pf)} de la classe.`, 'E', `${KO}.`, `c'est la même information : ${KO}.`, `aucun nombre d'élèves : ${KO}.`);
@@ -2634,9 +3045,10 @@ gen('cm.effectif', { sub: 'cm', ch: 'cm-methode', name: 'Effectifs et proportion
   return cmQ(Q, `Si ${k} élèves partaient, il en resterait ${T - k}.`, 'Il y a plus de filles que de garçons.', 'A', `${T - k} + ${k} = ${T} : ${OK}.`, `${KO}.`);
 });
 gen('cm.tri', { sub: 'cm', ch: 'cm-methode', name: 'Triangles', target: 75, diffs: [2, 3] }, (R) => {
-  const v = cmPick(R, ['C', 'A', 'D', 'E']);
+  const v = cmPick(R, ['C', 'A', 'D', 'E', 'B']);
   const Q = 'Le triangle ABC est-il rectangle ?';
   const [a, b, c] = R.pick([[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17]]);
+  if (v === 'B') return cmQ(Q, `AB = ${c} cm.`, 'Les angles  et B̂ mesurent 40° et 50°.', 'B', `${KO}.`, `Ĉ = 180 ${MINUS} 40 ${MINUS} 50 = 90° : ${OK}.`);
   if (v === 'C') return cmQ(Q, `AB = ${a} cm et BC = ${b} cm.`, `AC = ${c} cm.`, 'C', `le 3e côté est inconnu : ${KO}.`, `${KO}.`, `${a}² + ${b}² = ${a * a + b * b} = ${c}² : rectangle en B (réciproque de Pythagore), ça ${OK}.`);
   if (v === 'A') return cmQ(Q, 'Les angles  et B̂ mesurent 35° et 55°.', `AB = ${c} cm.`, 'A', `Ĉ = 180 ${MINUS} 35 ${MINUS} 55 = 90° : ${OK}.`, `${KO}.`);
   if (v === 'D') return cmQ(Q, ' + B̂ = 90°', 'AB² = AC² + BC²', 'D', `Ĉ = 180 ${MINUS} 90 = 90° : ${OK}.`, `réciproque de Pythagore : rectangle en C, ${OK}.`);
@@ -2644,8 +3056,12 @@ gen('cm.tri', { sub: 'cm', ch: 'cm-methode', name: 'Triangles', target: 75, diff
 });
 gen('cm.travail', { sub: 'cm', ch: 'cm-methode', name: 'Travail en commun', target: 75, diffs: [2, 3] }, (R) => {
   const [a, b, t] = R.pick([[6, 12, 4], [3, 6, 2], [10, 15, 6], [4, 12, 3], [12, 24, 8]]);
-  const v = cmPick(R, ['C', 'E', 'A']);
+  const v = cmPick(R, ['C', 'E', 'A', 'B', 'D']);
   const Q = 'Combien de temps faudrait-il à Anna, seule, pour faire ce travail ?';
+  const third = a / 3 === Math.round(a / 3);
+  const anna = `En ${third ? a / 3 : 1} h, Anna fait ${third ? 'le tiers' : F(1, a)} du travail.`;
+  if (v === 'B') return cmQ(Q, `Bruno, seul, mettrait ${b} h.`, anna, 'B', `on ne sait rien du rythme d'Anna : ${KO}.`, `Anna travaille à rythme constant : ${a} h, ${OK}.`);
+  if (v === 'D') return cmQ(Q, `Anna et Bruno mettent ${t} h ensemble, et Bruno seul mettrait ${b} h.`, anna, 'D', `${F(1, t)} ${MINUS} ${F(1, b)} = ${F(1, a)} par heure, donc ${a} h : ${OK}.`, `${a} h : ${OK}.`);
   if (v === 'C') return cmQ(Q, `Anna et Bruno, ensemble, mettent ${t} h.`, `Bruno, seul, mettrait ${b} h.`, 'C', `${KO}.`, `${KO}.`, `Anna : ${F(1, t)} ${MINUS} ${F(1, b)} = ${F(1, a)} du travail par heure, donc ${a} h : ça ${OK}.`);
   if (v === 'E') return cmQ(Q, `Anna et Bruno, ensemble, mettent ${t} h.`, 'Bruno travaille plus vite qu\'Anna.', 'E', `${KO}.`, `${KO}.`, `une inégalité ne donne pas le rythme de Bruno : ${KO}.`);
   return cmQ(Q, `En ${a / 3 === Math.round(a / 3) ? a / 3 : 1} h, Anna fait ${a / 3 === Math.round(a / 3) ? 'le tiers' : `${F(1, a)}`} du travail.`, `Bruno, seul, mettrait ${b} h.`, 'A', `Anna travaille à rythme constant : ${a} h, ${OK}.`, `on ne connaît rien du rythme d'Anna : ${KO}.`);
@@ -2662,19 +3078,48 @@ gen('cm.ratio', { sub: 'cm', ch: 'cm-methode', name: 'Rapports et proportions', 
 });
 gen('cm.venn', { sub: 'cm', ch: 'cm-methode', name: 'Ensembles', target: 75, diffs: [2, 3] }, (R) => {
   const both = R.int(3, 8), onlyF = R.int(5, 15), onlyT = R.int(4, 12), none = R.int(2, 10), F0 = onlyF + both, T0 = onlyT + both, N = onlyF + onlyT + both + none;
-  const v = cmPick(R, ['C', 'E', 'C2']);
+  const v = cmPick(R, ['C', 'E', 'C2', 'A', 'B']);
   const Q = 'Combien d\'élèves de cette classe pratiquent à la fois le foot et le tennis ?';
+  const full = `La classe compte ${N} élèves : ${F0} font du foot, ${T0} du tennis et ${none} ne font aucun des deux.`, vague = 'Certains élèves pratiquent les deux sports.';
+  const why = `au moins un sport : ${N} ${MINUS} ${none} = ${N - none}, donc les deux : ${F0} + ${T0} ${MINUS} ${N - none} = ${both}`;
+  if (v === 'A') return cmQ(Q, full, vague, 'A', `${why} : ${OK}.`, `${KO}.`);
+  if (v === 'B') return cmQ(Q, vague, full, 'B', `${KO}.`, `${why} : ${OK}.`);
   if (v === 'C') return cmQ(Q, `${N - none} élèves pratiquent au moins l'un des deux sports.`, `${F0} élèves font du foot et ${T0} du tennis.`, 'C', `${KO}.`, `${KO}.`, `${F0} + ${T0} ${MINUS} ${N - none} = ${both} : ça ${OK}.`);
   if (v === 'E') return cmQ(Q, `${F0} élèves font du foot et ${T0} du tennis.`, `La classe compte ${N} élèves.`, 'E', `${KO}.`, `${KO}.`, `il manque le nombre d'élèves qui ne font aucun des deux : ${KO}.`);
   return cmQ(Q, `La classe compte ${N} élèves, dont ${F0} font du foot et ${T0} du tennis.`, `${none} élèves ne pratiquent aucun de ces deux sports.`, 'C', `${KO}.`, `${KO}.`, `au moins un sport : ${N} ${MINUS} ${none} = ${N - none}, donc les deux : ${F0} + ${T0} ${MINUS} ${N - none} = ${both}. Ça ${OK}.`);
 });
 gen('cm.ent', { sub: 'cm', ch: 'cm-methode', name: 'Trouver un entier', target: 65 }, (R) => {
-  const v = cmPick(R, ['C', 'A', 'E', 'B']);
+  const v = cmPick(R, ['C', 'A', 'E', 'B', 'D']);
   const Q = 'Quelle est la valeur de l\'entier n ?';
+  if (v === 'D') return cmQ(Q, 'n est un nombre premier pair.', 'n est un entier positif dont le carré vaut 4.', 'D', `le seul nombre premier pair est 2 : ${OK}.`, `n = 2 : ${OK}.`);
   if (v === 'C') return cmQ(Q, 'n est un multiple de 7 compris entre 20 et 40.', 'n est pair.', 'C', `21, 28 ou 35 : ${KO}.`, `${KO}.`, `seul 28 est pair : ça ${OK}.`);
   if (v === 'A') return cmQ(Q, 'n est un nombre premier compris entre 24 et 30.', 'n est impair.', 'A', `seul 29 convient : ${OK}.`, `${KO}.`);
   if (v === 'E') return cmQ(Q, 'n est un multiple de 5 compris entre 10 et 40.', 'n est impair.', 'E', `${KO}.`, `${KO}.`, `15, 25 ou 35 : ${KO}.`);
   return cmQ(Q, 'n est impair.', 'n est le carré d\'un entier et 40 &lt; n &lt; 60.', 'B', `${KO}.`, `seul 49 = 7² convient : ${OK}.`);
+});
+gen('cm.suite', { sub: 'cm', ch: 'cm-methode', name: 'Suites', target: 70, diffs: [2, 3] }, (R) => {
+  const u1 = R.int(1, 12), r = R.int(2, 9), u = (k) => u1 + (k - 1) * r;
+  const v = cmPick(R, ['C', 'A', 'B', 'D', 'E']);
+  const Q = 'On considère une suite arithmétique (on ajoute toujours le même nombre). Quel est son 10e terme ?';
+  const both = `u<sub>10</sub> = ${u1} + 9 ${X} ${r} = ${u(10)}`;
+  if (v === 'C') return cmQ(Q, `Son premier terme vaut ${u1}.`, `On ajoute ${r} à chaque étape.`, 'C', `la raison est inconnue : ${KO}.`, `le point de départ est inconnu : ${KO}.`, `${both} : ça ${OK}.`);
+  const two = `Son 2e terme vaut ${u(2)} et son 5e terme vaut ${u(5)}.`, two2 = `de u<sub>2</sub> à u<sub>5</sub>, on ajoute 3 fois la raison : r = (${u(5)} ${MINUS} ${u(2)}) ${DV} 3 = ${r}, donc u<sub>1</sub> = ${u1} et ${both}`;
+  if (v === 'A') return cmQ(Q, two, 'Tous ses termes sont positifs.', 'A', `${two2} : ${OK}.`, `${KO}.`);
+  if (v === 'B') return cmQ(Q, 'Tous ses termes sont positifs.', two, 'B', `${KO}.`, `${two2} : ${OK}.`);
+  if (v === 'D') return cmQ(Q, `Son 1er terme vaut ${u1} et son 4e vaut ${u(4)}.`, `Son 3e terme vaut ${u(3)} et on ajoute ${r} à chaque étape.`, 'D', `r = (${u(4)} ${MINUS} ${u1}) ${DV} 3 = ${r} : ${OK}.`, `on remonte à u<sub>1</sub> = ${u1} : ${OK}.`);
+  return cmQ(Q, `On ajoute ${r} à chaque étape.`, 'Tous ses termes sont positifs.', 'E', `${KO}.`, `${KO}.`, `le premier terme reste inconnu : ${KO}.`);
+});
+gen('cm.benef', { sub: 'cm', ch: 'cm-methode', name: 'Chiffre d\'affaires et bénéfice', target: 70, diffs: [1, 2] }, (R) => {
+  const q = R.int(5, 30) * 20, mu = R.pick([5, 8, 10, 12, 15]), CF = Math.max(100, Math.round(q * mu * R.pick([0.3, 0.4, 0.5, 0.6]) / 100) * 100), cv = R.pick([10, 12, 15, 20]);
+  const pv = cv + mu, CA = q * pv, ben = q * mu - CF, CT = CA - ben;
+  const v = cmPick(R, ['C', 'A', 'B', 'E', 'D']);
+  const Q = 'Quel bénéfice l\'entreprise a-t-elle réalisé ce mois-ci ?';
+  const full = `Elle a vendu ${fmt(q)} unités, chacune lui rapportant ${mu} € de marge, et ses coûts fixes sont de ${fmt(CF)} €.`;
+  if (v === 'C') return cmQ(Q, `Son chiffre d'affaires est de ${fmt(CA)} €.`, `Ses coûts totaux s'élèvent à ${fmt(CT)} €.`, 'C', `${KO}.`, `${KO}.`, `bénéfice = ${fmt(CA)} ${MINUS} ${fmt(CT)} = ${fmt(ben)} € : ça ${OK}.`);
+  if (v === 'A') return cmQ(Q, full, 'Son chiffre d\'affaires a augmenté de 10 % par rapport au mois précédent.', 'A', `${fmt(q)} ${X} ${mu} ${MINUS} ${fmt(CF)} = ${fmt(ben)} € : ${OK}.`, `${KO}.`);
+  if (v === 'B') return cmQ(Q, 'Son chiffre d\'affaires a augmenté de 10 % par rapport au mois précédent.', full, 'B', `${KO}.`, `${fmt(q)} ${X} ${mu} ${MINUS} ${fmt(CF)} = ${fmt(ben)} € : ${OK}.`);
+  if (v === 'E') return cmQ(Q, `Son chiffre d'affaires est de ${fmt(CA)} €.`, `Ses coûts fixes sont de ${fmt(CF)} €.`, 'E', `${KO}.`, `${KO}.`, `il manque les coûts variables : ${KO}.`);
+  return cmQ(Q, `Ses coûts totaux s'élèvent à ${fmt(CT)} € pour un chiffre d'affaires de ${fmt(CA)} €.`, full, 'D', `${fmt(CA)} ${MINUS} ${fmt(CT)} = ${fmt(ben)} € : ${OK}.`, `${fmt(q)} ${X} ${mu} ${MINUS} ${fmt(CF)} = ${fmt(ben)} € : ${OK}.`);
 });
 
 /* ---- 50-logique.js ---- */
@@ -3059,6 +3504,8 @@ chapter({
 <tr><td>Attaque personnelle (ad hominem)</td><td>Il a été condamné, donc son étude est fausse.</td></tr>
 <tr><td>Raisonnement circulaire</td><td>Ce journal dit vrai puisqu'il l'affirme lui-même.</td></tr>
 <tr><td>Biais de sélection</td><td>Seuls les meilleurs ont testé le télétravail, et ils sont productifs.</td></tr>
+<tr><td>Homme de paille</td><td>Déformer la position de l'adversaire pour l'attaquer plus facilement.</td></tr>
+<tr><td>Échantillon non représentatif</td><td>Sondage fait uniquement auprès des membres d'un club de golf.</td></tr>
 </table></div>`,
 });
 
@@ -3284,6 +3731,93 @@ bankGen('expr', 'homo', 'expr-ortho', 'Homophones et orthographe');
 bankGen('expr', 'paro', 'expr-vocab', 'Paronymes');
 bankGen('expr', 'vocab', 'expr-vocab', 'Sens des mots');
 bankGen('expr', 'synt', 'expr-vocab', 'Constructions et connecteurs');
+
+/* ---- 63-verbal-plus.js ---- */
+/* ===== Contenu verbal supplémentaire : textes, raisonnements, expression ===== */
+[
+  {
+    id: 'cdt4', title: 'La semaine de quatre jours',
+    html: `<p>Longtemps cantonnée à quelques expériences isolées, la semaine de quatre jours s'invite désormais dans le débat public. Plusieurs pays ont mené des expérimentations à grande échelle, et des entreprises de toutes tailles s'y essaient. Le principe paraît simple : travailler quatre jours au lieu de cinq. Mais derrière ce slogan se cachent deux modèles très différents, que l'on aurait tort de confondre.</p>
+<p>Le premier consiste à <b>comprimer</b> le même nombre d'heures sur quatre jours. Les journées s'allongent, mais le salarié gagne un jour de repos. Le second, plus ambitieux, <b>réduit</b> réellement le temps de travail, par exemple 32 heures payées comme 35. Dans ce cas, l'entreprise parie que le gain de motivation et d'efficacité compensera les heures perdues.</p>
+<p>Les partisans de la réforme mettent en avant des résultats encourageants : moins d'absentéisme, des salariés moins épuisés, une meilleure capacité à recruter dans des métiers en tension. La productivité serait parfois maintenue grâce à une chasse aux tâches inutiles, à commencer par les réunions interminables. Les critiques, eux, rappellent que le modèle ne convient pas à tous les secteurs : un hôpital, un commerce ou un service client doivent fonctionner six ou sept jours sur sept. Ils soulignent aussi le risque d'intensification : des journées plus denses peuvent devenir plus fatigantes que la semaine qu'elles remplacent.</p>
+<p>Au fond, la question n'est peut-être pas le nombre de jours, mais la manière dont le travail est organisé. Là où la semaine de quatre jours réussit, elle s'accompagne d'une réflexion sur les priorités et d'une évaluation fondée sur les résultats plutôt que sur le temps de présence. Imposée sans cette réflexion, elle risque de n'être qu'un emploi du temps redessiné.</p>`,
+    qs: [
+      CQ('cdt4-1', 'idee', 'Quelle est l\'idée principale du texte ?', ['La semaine de quatre jours recouvre des modèles différents, et son succès dépend surtout de l\'organisation du travail.', 'La semaine de quatre jours augmente toujours la productivité.', 'La semaine de quatre jours doit être imposée à tous les secteurs.', 'Les salariés préfèrent travailler moins pour gagner moins.', 'Les réunions sont la principale cause de fatigue au travail.'], 'Le texte distingue deux modèles (§2), présente arguments et limites (§3) et conclut que tout dépend de l\'organisation (§4). « Toujours » et « à tous » sont trop forts.'),
+      CQ('cdt4-2', 'detail', 'Selon le texte, en quoi consiste le modèle « comprimé » ?', ['Travailler le même nombre d\'heures sur quatre jours au lieu de cinq.', 'Travailler 32 heures payées comme 35.', 'Supprimer une journée de travail sans rien changer d\'autre.', 'Travailler quatre jours puis prendre quatre jours de repos.', 'Réduire le salaire de 20 %.'], '§2 : « comprimer le même nombre d\'heures sur quatre jours. Les journées s\'allongent ». Les 32 heures payées 35 correspondent au second modèle.'),
+      CQ('cdt4-3', 'inference', 'Que peut-on déduire de la position de l\'auteur ?', ['Il juge la semaine de quatre jours utile à condition de repenser l\'organisation du travail.', 'Il y est totalement opposé.', 'Il pense qu\'elle résoudra tous les problèmes du travail.', 'Il estime qu\'elle ne concerne que les hôpitaux.', 'Il considère que le temps de présence est le meilleur indicateur.'], '§4 : « là où la semaine de quatre jours réussit, elle s\'accompagne d\'une réflexion sur les priorités ». L\'auteur est nuancé, ni hostile ni enthousiaste.'),
+      CQ('cdt4-4', 'vocab', 'Dans le texte, le mot « intensification » désigne :', ['le fait que le travail devienne plus dense et plus soutenu', 'l\'augmentation des salaires', 'la multiplication des jours de repos', 'la baisse de la motivation', 'l\'allongement des vacances'], '« Des journées plus denses peuvent devenir plus fatigantes » : l\'intensification, c\'est faire autant (ou plus) en moins de temps.'),
+      CQ('cdt4-5', 'auteur', 'Pourquoi l\'auteur cite-t-il l\'hôpital, le commerce et le service client ?', ['Pour montrer que le modèle ne convient pas à tous les secteurs.', 'Pour prouver que ces secteurs sont les plus productifs.', 'Pour montrer qu\'ils ont déjà adopté la semaine de quatre jours.', 'Pour illustrer le recrutement dans les métiers en tension.', 'Pour critiquer leurs conditions de travail.'], 'Ces exemples appuient l\'argument des critiques : ces activités doivent fonctionner « six ou sept jours sur sept ».'),
+    ],
+  },
+  {
+    id: 'cdt5', title: 'Le surtourisme',
+    html: `<p>Ruelles saturées, files d'attente interminables devant les monuments, habitants qui désertent les centres historiques : dans plusieurs grandes destinations, le tourisme est devenu une source de tension. On parle désormais de « surtourisme » pour désigner cette situation où le nombre de visiteurs dépasse ce qu'un lieu peut accueillir sans se dégrader.</p>
+<p>Le phénomène a plusieurs causes. Les vols à bas prix et les croisières ont rendu les voyages plus accessibles. Les plateformes de location de courte durée ont multiplié les hébergements touristiques au cœur des villes. Enfin, les réseaux sociaux concentrent les visiteurs sur les mêmes points de vue, devenus incontournables parce qu'ils sont photographiés par tous.</p>
+<p>Les conséquences dépassent la simple gêne. Lorsque des logements entiers sont réservés aux touristes, les loyers augmentent et les habitants s'éloignent ; les commerces de proximité cèdent la place aux boutiques de souvenirs. Les sites naturels souffrent de l'érosion et des déchets. Pourtant, le tourisme fait vivre des millions de personnes, et nombre de villes ne sauraient s'en passer. C'est tout le dilemme : comment préserver un lieu sans renoncer à ce qui le fait vivre ?</p>
+<p>Les réponses se multiplient : encadrement des locations de courte durée, quotas de visiteurs, réservations obligatoires, taxes pour les excursions à la journée. Mais la piste la plus prometteuse est sans doute de mieux répartir les visiteurs, dans l'espace comme dans le temps, en valorisant des destinations moins connues et des périodes moins fréquentées. L'objectif n'est pas d'avoir moins de touristes, mais un tourisme mieux réparti.</p>`,
+    qs: [
+      CQ('cdt5-1', 'idee', 'Quelle est l\'idée principale du texte ?', ['Le surtourisme a des causes et des effets multiples, et la solution passe surtout par une meilleure répartition des visiteurs.', 'Il faut interdire le tourisme dans les centres historiques.', 'Les réseaux sociaux sont la seule cause du surtourisme.', 'Le tourisme n\'apporte aucun bénéfice aux villes.', 'Les croisières sont plus polluantes que les avions.'], 'Le texte définit le phénomène (§1), ses causes (§2), ses effets et le dilemme (§3), puis les solutions, dont la meilleure répartition (§4).'),
+      CQ('cdt5-2', 'detail', 'Quel rôle le texte attribue-t-il aux réseaux sociaux ?', ['Ils concentrent les visiteurs sur les mêmes lieux.', 'Ils permettent de mieux répartir les touristes.', 'Ils font baisser les prix des voyages.', 'Ils multiplient les locations de courte durée.', 'Ils incitent les habitants à quitter les centres-villes.'], '§2 : « les réseaux sociaux concentrent les visiteurs sur les mêmes points de vue ».'),
+      CQ('cdt5-3', 'inference', 'Que peut-on déduire de la position de l\'auteur ?', ['Il ne souhaite pas réduire le tourisme mais mieux l\'organiser.', 'Il souhaite que les touristes restent chez eux.', 'Il pense que les taxes sont la meilleure solution.', 'Il juge le phénomène sans importance.', 'Il défend les plateformes de location.'], 'Dernière phrase : « L\'objectif n\'est pas d\'avoir moins de touristes, mais un tourisme mieux réparti. » Les taxes sont citées parmi d\'autres réponses, pas comme la meilleure.'),
+      CQ('cdt5-4', 'vocab', 'Dans le texte, le mot « dilemme » désigne :', ['une situation où il faut choisir entre deux exigences difficiles à concilier', 'une solution simple et évidente', 'un conflit entre deux villes', 'une erreur de calcul', 'une loi qui encadre le tourisme'], 'Le dilemme oppose préserver un lieu et ne pas renoncer à ce qui le fait vivre : deux exigences contradictoires.'),
+      CQ('cdt5-5', 'auteur', 'À quoi sert l\'exemple des commerces de proximité remplacés par des boutiques de souvenirs ?', ['À illustrer les conséquences du surtourisme sur la vie des habitants.', 'À montrer que le tourisme crée des emplois.', 'À critiquer les vols à bas prix.', 'À prouver que les loyers baissent.', 'À présenter une solution au surtourisme.'], 'Il fait partie des conséquences décrites au §3 : la ville se transforme au détriment de ceux qui y vivent.'),
+    ],
+  },
+].forEach((t) => {
+  TM.cdtTexts.push(t);
+  t.qs.forEach((q) => TM.banks.cdt.push(Object.assign({}, q, { textId: t.id, passage: t.html, passageTitle: t.title })));
+});
+
+TM.banks.ra.push(
+  RAQ('ra29', 'concl', 'En cinq ans, les ventes de vélos électriques ont doublé dans la ville, pendant que le nombre de pistes cyclables triplait. Or, d\'après les enquêtes, le manque de pistes sécurisées est le premier frein cité par ceux qui n\'utilisent pas le vélo.', 'Quelle conclusion ces informations soutiennent-elles le mieux ?', ['Le développement des pistes cyclables a probablement contribué à la hausse des ventes de vélos électriques.', 'Tous les habitants vont bientôt se déplacer à vélo.', 'Les vélos électriques sont devenus moins chers.', 'La ville devrait interdire les voitures.', 'Les pistes cyclables ont été financées par les ventes de vélos.'], 'Le premier frein (le manque de pistes) a été fortement réduit au moment où les ventes ont doublé : la 1re réponse est la conclusion prudente qui en découle. Les autres ajoutent des informations ou vont trop loin.'),
+  RAQ('ra30', 'hyp', 'Cette start-up vient de lever 10 millions d\'euros auprès d\'investisseurs. Elle va donc forcément devenir rentable.', 'Sur quelle hypothèse repose ce raisonnement ?', ['Disposer de beaucoup de capitaux suffit pour devenir rentable.', 'Les investisseurs se trompent souvent.', 'La start-up a beaucoup de concurrents.', 'Les start-up ne lèvent jamais autant d\'argent.', 'La rentabilité dépend du secteur d\'activité.'], 'Pour passer de « elle a levé des fonds » à « elle sera rentable », il faut supposer que l\'argent suffit. Nier cette hypothèse fait tomber l\'argument.'),
+  RAQ('ra31', 'aff', 'Le directeur affirme que la nouvelle cantine, plus équilibrée, a amélioré la santé des salariés : les arrêts maladie ont baissé de 15 % cette année.', 'Quelle information affaiblit le plus ce raisonnement ?', ['L\'année précédente, une épidémie de grippe avait fait exploser le nombre d\'arrêts maladie.', 'La nouvelle cantine propose des plats végétariens.', 'Les salariés apprécient la nouvelle cantine.', 'Le prix des repas a légèrement augmenté.', 'La cantine a été rénovée par une entreprise locale.'], 'Si l\'année de comparaison était exceptionnellement mauvaise, la baisse s\'explique par le retour à la normale, pas par la cantine.'),
+  RAQ('ra32', 'renf', 'La mairie affirme que le remplacement de l\'éclairage public par des ampoules LED a fait baisser sa facture d\'électricité de 20 %.', 'Quelle information renforce le plus cette affirmation ?', ['Le prix du kilowattheure a augmenté pendant la même période.', 'Les ampoules LED durent plus longtemps.', 'Les habitants trouvent le nouvel éclairage agréable.', 'La mairie a aussi acheté des véhicules électriques.', 'D\'autres villes ont fait le même choix.'], 'Si la facture baisse alors que le prix de l\'électricité augmente, c\'est que la consommation a beaucoup baissé : l\'effet des LED en sort renforcé. Les véhicules électriques, eux, brouilleraient la comparaison.'),
+  RAQ('ra33', 'logique', 'Aucun salarié en période d\'essai ne peut poser de congés. Clara a posé des congés la semaine dernière.', 'Que peut-on en déduire ?', ['Clara n\'est pas en période d\'essai.', 'Clara est en période d\'essai.', 'Clara a demandé l\'autorisation de son manager.', 'Tous les salariés posent des congés.', 'On ne peut rien conclure.'], '« Aucun salarié en période d\'essai ne pose de congés » équivaut à « quiconque pose des congés n\'est pas en période d\'essai ».'),
+  RAQ('ra34', 'logique', 'Seuls les clients fidèles reçoivent le code promotionnel. Marc a reçu le code promotionnel.', 'Que peut-on en déduire avec certitude ?', ['Marc est un client fidèle.', 'Tous les clients fidèles ont reçu le code.', 'Marc a utilisé le code.', 'Marc n\'est pas un client fidèle.', 'Le code est valable pour tous les produits.'], '« Seuls les fidèles reçoivent le code » : recevoir le code implique d\'être fidèle. En revanche, rien ne dit que tous les fidèles l\'ont reçu.'),
+  RAQ('ra35', 'faille', 'Un sondage réalisé sur le site internet d\'un club de golf montre que 80 % des répondants trouvent que le golf n\'est pas assez diffusé à la télévision. Les Français réclament donc davantage de golf à la télévision.', 'Quelle est la faille de ce raisonnement ?', ['L\'échantillon interrogé n\'est pas représentatif de la population.', 'Il confond la cause et la conséquence.', 'Il attaque les opposants au golf.', 'Il s\'appuie sur une autorité non compétente.', 'Il présente un faux dilemme.'], 'Les visiteurs du site d\'un club de golf aiment le golf : on ne peut pas étendre leur avis à tous les Français.'),
+  RAQ('ra36', 'parad', 'Un restaurant a augmenté ses prix de 15 %, et pourtant son nombre de clients a augmenté.', 'Quelle information explique le mieux ce constat ?', ['Le restaurant a reçu au même moment une distinction dans un guide gastronomique réputé.', 'Les prix ont augmenté dans tous les restaurants.', 'Le restaurant a réduit la taille de ses portions.', 'Le chef a changé la couleur de la salle.', 'Les clients se plaignent des prix.'], 'Une distinction attire de nouveaux clients malgré la hausse des prix. Réduire les portions, au contraire, n\'explique pas l\'afflux.'),
+  RAQ('ra37', 'para', 'Si une plante est trop arrosée, elle pourrit. Cette plante n\'a pas pourri. Donc elle n\'a pas été trop arrosée.', 'Quel raisonnement a exactement la même structure ?', ['Si un candidat triche, il est disqualifié. Ce candidat n\'a pas été disqualifié. Donc il n\'a pas triché.', 'Si un candidat triche, il est disqualifié. Ce candidat a été disqualifié. Donc il a triché.', 'Si un candidat triche, il est disqualifié. Ce candidat n\'a pas triché. Donc il n\'a pas été disqualifié.', 'Certains candidats trichent. Ce candidat est disqualifié. Donc il a triché.', 'Aucun candidat ne triche. Donc personne n\'est disqualifié.'], 'Structure : si A alors B ; non B ; donc non A (la contraposée, valide). La 2e réponse affirme la réciproque, la 3e nie l\'antécédent : deux erreurs classiques.'),
+  RAQ('ra38', 'hyp', 'Les étudiants qui utilisent cette application de révision obtiennent de meilleures notes que les autres. L\'université devrait donc l\'offrir à tous ses étudiants pour améliorer leurs résultats.', 'Sur quelle hypothèse repose cette recommandation ?', ['C\'est l\'utilisation de l\'application qui améliore les notes, et non le fait que les meilleurs étudiants l\'utilisent davantage.', 'L\'application est gratuite.', 'Tous les étudiants ont un smartphone.', 'Les notes sont le seul indicateur de réussite.', 'L\'université a les moyens de payer l\'application.'], 'Le raisonnement suppose un lien de cause à effet. Si ce sont simplement les étudiants déjà sérieux qui utilisent l\'application, l\'offrir à tous ne changerait rien.'),
+  RAQ('ra39', 'faille', 'Mon adversaire propose de réduire légèrement le budget de la défense. Il veut donc laisser notre pays sans aucune protection.', 'Quelle est la faille de ce raisonnement ?', ['Il déforme la position de l\'adversaire pour la rendre plus facile à attaquer.', 'Il s\'appuie sur une statistique erronée.', 'Il généralise à partir d\'un seul cas.', 'Il confond corrélation et causalité.', 'Il utilise sa conclusion comme preuve.'], 'C\'est un « homme de paille » : une légère réduction est transformée en abandon total de la défense, position que l\'adversaire n\'a jamais défendue.'),
+  RAQ('ra40', 'concl', 'Toutes les entreprises du secteur qui ont généralisé le télétravail ont vu leurs coûts immobiliers baisser. L\'entreprise Novalia appartient à ce secteur et a généralisé le télétravail.', 'Que peut-on en conclure ?', ['Les coûts immobiliers de Novalia ont baissé.', 'Novalia a augmenté sa productivité.', 'Toutes les entreprises du secteur ont généralisé le télétravail.', 'Les salariés de Novalia sont satisfaits.', 'Novalia va déménager.'], 'C\'est une déduction directe : Novalia fait partie du groupe dont « toutes » les entreprises ont vu leurs coûts baisser.'),
+);
+
+TM.banks.expr.push(
+  EXQ('ex94', 'accords', 'Complétez : « Les efforts qu\'il a ____ ont enfin porté leurs fruits. »', ['fournis', 'fourni', 'fournies', 'fournie', 'fournit'], 'Avec avoir, accord avec le COD placé avant : « qu\' » reprend « les efforts » (masculin pluriel) → <b>fournis</b>.'),
+  EXQ('ex95', 'accords', 'Complétez : « Elle s\'est vite ____ de son erreur. »', ['rendu compte', 'rendue compte', 'rendus compte', 'rendues compte', 'rendu comptes'], 'Dans « se rendre compte », le COD est « compte » : le participe reste invariable → <b>rendu compte</b>.'),
+  EXQ('ex96', 'accords', 'Complétez : « Veuillez trouver les factures ____. »', ['ci-jointes', 'ci-joint', 'ci-joints', 'ci-jointe', 'ci-joignées'], 'Placé APRÈS le nom, « ci-joint » s\'accorde avec lui : les factures → <b>ci-jointes</b>.'),
+  EXQ('ex97', 'accords', 'Complétez : « Il a fait tous les efforts qu\'il a ____. »', ['dû', 'dus', 'due', 'dues', 'du'], 'Le COD de « devoir » est un infinitif sous-entendu (faire) : le participe reste invariable → <b>dû</b> (avec accent, pour ne pas le confondre avec l\'article « du »).'),
+  EXQ('ex98', 'accords', 'Complétez : « Elle a les cheveux ____. »', ['châtains', 'châtain', 'châtaine', 'châtaines', 'châtainés'], '« Châtain » est un vrai adjectif de couleur : il s\'accorde en nombre avec « cheveux » → <b>châtains</b> (contrairement à « marron »).'),
+  EXQ('ex99', 'conjug', 'Complétez : « Il faut que tu ____ ce dossier avant midi. »', ['finisses', 'finis', 'finiras', 'finissais', 'finirais'], '« Il faut que » est suivi du subjonctif : que tu <b>finisses</b>.'),
+  EXQ('ex100', 'conjug', 'Complétez : « Pourvu qu\'il ____ beau demain ! »', ['fasse', 'fait', 'fera', 'faisait', 'ferait'], '« Pourvu que » exprime un souhait : subjonctif → <b>fasse</b>.'),
+  EXQ('ex101', 'conjug', 'Complétez : « Bien que nous ____ tout essayé, rien n\'a fonctionné. »', ['ayons', 'avons', 'aurions', 'aurons', 'ayions'], '« Bien que » + subjonctif passé : que nous <b>ayons</b> essayé (sans i après le y).'),
+  EXQ('ex102', 'conjug', 'Complétez au passé simple : « Le président ____ la séance à 18 heures. »', ['conclut', 'concluit', 'conclua', 'concluta', 'conclat'], 'Conclure au passé simple : il <b>conclut</b>.'),
+  EXQ('ex103', 'conjug', 'Complétez au passé simple : « Les jumeaux ____ un matin de printemps. »', ['naquirent', 'naîtèrent', 'naissèrent', 'nacquirent', 'naîtrent'], 'Naître au passé simple : ils <b>naquirent</b>.'),
+  EXQ('ex104', 'conjug', 'Complétez : « Quand vous ____ terminé, vous pourrez partir. »', ['aurez', 'auriez', 'avez', 'ayez', 'aviez'], 'Action antérieure à une autre action future : futur antérieur → vous <b>aurez</b> terminé.'),
+  EXQ('ex105', 'homo', 'Complétez : « Je ne pensais pas arriver ____. »', ['aussi tôt', 'aussitôt', 'aussitot', 'aussi-tôt', 'ausitôt'], '« Aussi tôt » (en deux mots) = si tôt, le contraire de « aussi tard ».'),
+  EXQ('ex106', 'homo', 'Complétez : « Il est reparti ____ après le repas. »', ['aussitôt', 'aussi tôt', 'aussitot', 'aussi-tôt', 'ausitôt'], '« Aussitôt » (en un mot) = immédiatement.'),
+  EXQ('ex107', 'homo', 'Complétez : « ____ tu dises, je ne changerai pas d\'avis. »', ['Quoi que', 'Quoique', 'Quoi-que', 'Quoiqu\'', 'Quoique que'], '« Quoi que » (en deux mots) = quelle que soit la chose que. « Quoique » = bien que.'),
+  EXQ('ex108', 'homo', 'Complétez : « ____ fatigué, il a terminé la course. »', ['Quoique', 'Quoi que', 'Quoi-que', 'Quoiqu\'il', 'Quoiqueque'], '« Quoique » (en un mot) = bien que, même s\'il était.'),
+  EXQ('ex109', 'homo', 'Complétez : « Il ne l\'a pas fait ____ : c\'était un accident. »', ['exprès', 'express', 'exprés', 'expresse', 'exprèsse'], '« Exprès » = volontairement. « Express » = rapide (un train express).'),
+  EXQ('ex110', 'homo', 'Complétez : « Il raconte cette anecdote à ____. »', ['l\'envi', 'l\'envie', 'l\'envis', 'l\'envies', 'lenvi'], '« À l\'envi » (sans e) signifie « à volonté, à qui mieux mieux ».'),
+  EXQ('ex111', 'paro', 'Complétez : « La ____ entre les deux voitures a fait trois blessés. »', ['collision', 'collusion', 'coalition', 'collation', 'colision'], '<b>Collision</b> = choc. « Collusion » = entente secrète.'),
+  EXQ('ex112', 'paro', 'Complétez : « Le ministre a prononcé une courte ____. »', ['allocution', 'allocation', 'élocution', 'locution', 'collocation'], 'Une <b>allocution</b> est un discours. Une « allocation » est une somme versée.'),
+  EXQ('ex113', 'paro', 'Complétez : « Des manifestants ont fait ____ dans la salle du conseil. »', ['irruption', 'éruption', 'interruption', 'corruption', 'irrution'], 'Faire <b>irruption</b> = entrer brusquement. Une « éruption » est une sortie brutale (volcan).'),
+  EXQ('ex114', 'paro', 'Complétez : « L\'____ du toit permet à la pluie de s\'écouler. »', ['inclinaison', 'inclination', 'déclinaison', 'inclinaisson', 'inclinaition'], 'L\'<b>inclinaison</b> est une pente. L\'« inclination » est un penchant, un goût.'),
+  EXQ('ex115', 'paro', 'Complétez : « Elle a une vraie ____ pour la musique classique. »', ['inclination', 'inclinaison', 'déclinaison', 'indication', 'incantation'], 'Une <b>inclination</b> = un penchant, une préférence.'),
+  EXQ('ex116', 'vocab', 'Que signifie <b>prosaïque</b> ?', ['Banal, terre à terre', 'Très poétique', 'Écrit en prose et en vers', 'Plein de prospérité', 'Prétentieux'], '<b>Prosaïque</b> : qui manque d\'idéal ou de poésie, ordinaire.'),
+  EXQ('ex117', 'vocab', 'Que signifie <b>dithyrambique</b> ?', ['Extrêmement élogieux', 'Très critique', 'Rythmé et musical', 'Difficile à prononcer', 'Ennuyeux'], 'Une critique <b>dithyrambique</b> fait un éloge enthousiaste, voire excessif.'),
+  EXQ('ex118', 'vocab', 'Que signifie <b>abscons</b> ?', ['Difficile à comprendre', 'Absent', 'Absolument certain', 'Abîmé', 'Très court'], '<b>Abscons</b> : obscur, hermétique (un discours abscons).'),
+  EXQ('ex119', 'vocab', 'Que signifie <b>inique</b> ?', ['Profondément injuste', 'Unique en son genre', 'Sans importance', 'Très ancien', 'Naïf'], '<b>Inique</b> : contraire à l\'équité (une décision inique).'),
+  EXQ('ex120', 'vocab', 'Que signifie <b>probe</b> ?', ['Honnête, intègre', 'Probable', 'Prudent', 'Fier', 'Problématique'], '<b>Probe</b> : d\'une honnêteté scrupuleuse (nom : la probité).'),
+  EXQ('ex121', 'vocab', 'Que désigne une <b>gageure</b> ?', ['Une entreprise très difficile à réussir', 'Une somme d\'argent prêtée', 'Un salaire', 'Une garantie bancaire', 'Un pari perdu d\'avance'], 'Une <b>gageure</b> (prononcer « gajure ») est un défi presque impossible à relever.'),
+  EXQ('ex122', 'accords', 'Complétez : « C\'est toi qui ____ raison. »', ['as', 'a', 'ai', 'avez', 'ont'], 'Après « c\'est toi qui », le verbe s\'accorde avec « toi » (2e personne du singulier) → tu <b>as</b>.'),
+  EXQ('ex123', 'synt', 'Quelle expression est un <b>pléonasme</b> ?', ['Réitérer à nouveau sa demande', 'Réitérer sa demande', 'Renouveler sa demande', 'Répéter sa demande', 'Formuler de nouveau sa demande'], '« Réitérer » signifie déjà « faire de nouveau » : « à nouveau » est de trop.'),
+  EXQ('ex124', 'synt', 'Choisissez le connecteur : « Il pleuvait à verse ; ____, le match a eu lieu. »', ['néanmoins', 'donc', 'car', 'ainsi', 'c\'est pourquoi'], 'Le match a eu lieu malgré la pluie : opposition → <b>néanmoins</b>.'),
+  EXQ('ex125', 'synt', 'Complétez : « Il a réussi son examen ____ ses efforts réguliers. »', ['grâce à', 'à cause de', 'faute de', 'en dépit de', 'malgré'], 'Cause positive → <b>grâce à</b>. « À cause de » introduit plutôt une cause négative.'),
+  EXQ('ex126', 'synt', 'Complétez : « Il a échoué ____ préparation suffisante. »', ['faute de', 'grâce à', 'à cause de la', 'en raison de sa', 'malgré'], '« Faute de » = par manque de. Les autres constructions ne conviennent pas ici.'),
+);
 
 /* ---- 70-ai.js ---- */
 /* ===== IA (Claude) : explications, prof particulier, génération de questions ===== */
@@ -3557,6 +4091,10 @@ function dailyPlan() {
     const vSub = ['ra', 'expr', 'cdt'][dn % 3];
     tasks.push({ id: 'verbal', sub: vSub, icon: 'book', t: `${SUB[vSub].name} : ${vSub === 'cdt' ? '1 texte' : '10 questions'}`, s: vSub === 'cdt' ? 'Garder ton point fort au top' : 'Points rapides à sécuriser', act: { type: 'train', sub: vSub } });
   }
+  if (Store.S.profile.dailyMin >= 30) {
+    const dueCards = TM.decks.reduce((a, d) => a + deckStats(d).due, 0);
+    tasks.push({ id: 'cards', sub: null, icon: 'book', t: 'Fiches mémo : 10 cartes', s: dueCards ? `${plural(dueCards, 'carte')} à revoir · 5 minutes` : 'Nouvelles cartes · 5 minutes, idéal dans les transports', act: { type: 'cards' } });
+  }
   if (Store.S.profile.dailyMin >= 45 && dn % 3 === 0) {
     const weakest = SUBS.map((s) => ({ s, p: projectSub(s.id) })).sort((a, b) => (a.p == null ? -1 : a.p) - (b.p == null ? -1 : b.p))[0].s;
     tasks.push({ id: 'exam', sub: weakest.id, icon: 'clock', t: `Épreuve chronométrée : ${weakest.name}`, s: '15 questions en 20 minutes', act: { type: 'exam', sub: weakest.id } });
@@ -3649,7 +4187,8 @@ function toPlainTitle(t) { return String(t || 'Texte').replace(/<[^>]+>/g, ''); 
 function fbHTML(q, sel) {
   const ok = sel === q.answer;
   const head = sel == null ? `Réponse : ${LETTERS[q.answer]}` : ok ? 'Bonne réponse' : `Raté : la bonne réponse est ${LETTERS[q.answer]}`;
-  return `<div class="fb ${ok ? 'ok' : 'ko'}"><div class="fb-h">${ok ? ic('check') : ic('close')}<span>${head}</span></div><div class="expl">${q.expl || ''}</div>${q.tip ? `<div class="tip">${q.tip}</div>` : ''}${q.trap ? `<div class="trap">${q.trap}</div>` : ''}${aiExplainBlock()}</div>`;
+  const lessonBtn = q.chapter && TM.chapters[q.chapter] ? `<button class="btn ghost sm" data-act="peek" data-ch="${q.chapter}">${ic('book')}Revoir le cours</button>` : '';
+  return `<div class="fb ${ok ? 'ok' : 'ko'}"><div class="fb-h">${ok ? ic('check') : ic('close')}<span>${head}</span></div><div class="expl">${q.expl || ''}</div>${q.tip ? `<div class="tip">${q.tip}</div>` : ''}${q.trap ? `<div class="trap">${q.trap}</div>` : ''}<div class="row wrap">${lessonBtn}</div>${aiExplainBlock()}</div>`;
 }
 function aiExplainBlock() {
   if (!AI.available()) return '';
@@ -3692,6 +4231,7 @@ class Session {
       const left = (this.deadline - Date.now()) / 1000;
       c.querySelector('span').textContent = mmss(left);
       c.classList.toggle('low', left < 120);
+      const pace = $('#pace'); if (pace) { const p = this.pace(); pace.textContent = p.txt; pace.className = 'pill ' + p.cls; }
       if (left <= 0) { toast('Temps écoulé : l\'épreuve est terminée.'); this.finish(); }
     } else if (!this.revealed) {
       const el = (Date.now() - this.qStart) / 1000;
@@ -3699,12 +4239,20 @@ class Session {
       c.classList.toggle('low', el > (this.q.target || 80));
     }
   }
+  pace() {
+    const el = (Date.now() - this.t0) / 1000, per = this.limit / this.n;
+    const ideal = Math.min(this.n, Math.floor(el / per) + 1), at = this.i + 1;
+    if (this.diag) return { txt: `Question idéale : ${ideal}`, cls: '' };
+    if (at >= ideal + 1) return { txt: `En avance (idéal : q. ${ideal})`, cls: 'ok' };
+    if (at >= ideal - 1) return { txt: `Dans les temps (q. ${ideal})`, cls: '' };
+    return { txt: `En retard : vise la q. ${ideal}`, cls: 'warn' };
+  }
   render() {
     const q = this.q, exam = this.mode === 'exam';
     const answered = this.ans.filter((a) => a != null).length;
     const prog = exam ? answered / this.n : this.i / this.n;
     const st = { sel: this.ans[this.i], reveal: !exam && this.revealed, flag: this.flags.has(this.i), fullText: this.fullText };
-    const bar = `<div class="lbar"><button class="iconbtn" data-act="quit" aria-label="Quitter">${ic('close')}</button><div class="ttl">${esc(this.title)} <span class="faint num">· ${this.i + 1}/${this.n}</span></div><span class="chrono" id="chrono">${ic('clock')}<span>${exam ? mmss((this.deadline - Date.now()) / 1000) : '0:00'}</span></span></div><div class="progress" aria-hidden="true"><i style="width:${Math.round(prog * 100)}%"></i></div>`;
+    const bar = `<div class="lbar"><button class="iconbtn" data-act="quit" aria-label="Quitter">${ic('close')}</button><div class="ttl">${esc(this.title)} <span class="faint num">· ${this.i + 1}/${this.n}</span></div><span class="chrono" id="chrono">${ic('clock')}<span>${exam ? mmss((this.deadline - Date.now()) / 1000) : '0:00'}</span></span></div><div class="progress" aria-hidden="true"><i style="width:${Math.round(prog * 100)}%"></i></div>${exam ? `<div class="row" style="margin-top:8px"><span class="pill" id="pace">${this.pace().txt}</span></div>` : ''}`;
     let foot;
     if (exam) {
       foot = `<div class="qfoot"><button class="btn ghost" data-act="prev" ${this.i === 0 ? 'disabled' : ''}>${ic('back')}</button><button class="btn ghost" data-act="flag" aria-pressed="${st.flag}">${ic('flag')}</button><button class="btn ghost" data-act="grid">Grille</button>${this.i + 1 < this.n ? `<button class="btn" data-act="next">Suivante</button>` : `<button class="btn" data-act="end">Terminer</button>`}</div>`;
@@ -3760,14 +4308,16 @@ class Session {
       if (exam) { recordAnswer(q, a === q.answer, this.ms[k] || 0); markSeen(q); if (a !== q.answer) addError(q); }
     });
     const totalMs = Date.now() - this.t0;
-    const sc = exam ? score60(ok, ko) : null;
-    saveSession({ t: Date.now(), sub: this.sub, mode: this.mock ? 'mock' : this.mode, n, ok, sc, ms: totalMs, task: this.task, ch: this.ch || null });
+    const sc = exam && !this.diag ? score60(ok, ko) : null;
+    saveSession({ t: Date.now(), sub: this.sub, mode: this.mock ? 'mock' : this.diag ? 'diag' : this.mode, n, ok, sc, ms: totalMs, task: this.task, ch: this.ch || null });
     this.res = { n, ok, ko, blank, sc, totalMs, qs, ans };
     if (this.mock) return this.mock.subDone(this);
+    if (this.diag) return diagResults(this);
     if (!n) return closeLayer();
     this.renderResults();
   }
   renderResults() {
+    if (this.diag) return diagResults(this);
     const r = this.res, exam = this.mode === 'exam';
     const avg = r.n ? r.qs.reduce((a, q, k) => a + (this.ms[k] || 0), 0) / r.n / 1000 : 0;
     const hero = exam
@@ -3777,7 +4327,9 @@ class Session {
     const rows = r.qs.map((q, k) => { const a = r.ans[k], good = a === q.answer; return `<button class="li" data-act="rev-q" data-k="${k}"><span class="idx ${good ? 'done' : ''}">${k + 1}</span><span class="grow"><span class="t">${esc(skillName(q))}</span><br><span class="s">${a == null ? 'Sans réponse' : good ? 'Juste' : `Ta réponse : ${LETTERS[a]} · bonne : ${LETTERS[q.answer]}`} · ${Math.round((this.ms[k] || 0) / 1000)} s</span></span>${ic('chev', 'chev')}</button>`; }).join('');
     const wrongN = r.ko + r.blank;
     const msg = exam ? examComment(r.sc) : r.n && r.ok / r.n >= 0.8 ? 'Très bien : la difficulté va augmenter automatiquement.' : r.n && r.ok / r.n >= 0.5 ? 'C\'est en progrès. Relis les corrections des questions ratées.' : 'Pas de panique : relis le cours, puis refais une série. Les erreurs sont dans ton cahier.';
-    openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('close')}</button><div class="ttl">Bilan</div></div><div class="stack-lg">${hero}<p class="center muted">${msg}</p>${stats}<div class="btns">${wrongN ? `<button class="btn" data-act="redo-wrong">${ic('repeat')}Refaire les ${plural(wrongN, 'erreur')}</button>` : ''}<button class="btn ghost" data-act="close">Terminer</button></div><div class="sec"><div class="sec-h"><h3>Corrections</h3></div><div class="list">${rows}</div></div></div>`, this.sub);
+    const slow = exam ? r.qs.map((q, k) => ({ k, s: Math.round((this.ms[k] || 0) / 1000) })).filter((x) => x.s > 120) : [];
+    const slowTxt = slow.length ? `<div class="notice warn">Tu as passé plus de 2 minutes sur ${slow.map((x) => `la q. ${x.k + 1} (${mmss(x.s)})`).join(', ')}. Le jour J, applique la règle des 90 secondes : coche ta meilleure réponse et passe.</div>` : '';
+    openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('close')}</button><div class="ttl">Bilan</div></div><div class="stack-lg">${hero}<p class="center muted">${msg}</p>${slowTxt}${stats}<div class="btns">${wrongN ? `<button class="btn" data-act="redo-wrong">${ic('repeat')}Refaire les ${plural(wrongN, 'erreur')}</button>` : ''}<button class="btn ghost" data-act="close">Terminer</button></div><div class="sec"><div class="sec-h"><h3>Corrections</h3></div><div class="list">${rows}</div></div></div>`, this.sub);
     render();
   }
   reviewOne(k) {
@@ -3937,12 +4489,179 @@ function openLesson(chId) {
   Store.S.lessons[chId] = Date.now(); Store.save('main');
   const skills = ch.gens.map((id) => { const m = skillMastery(id); const g = TM.gens[id]; return `<div class="li"><span class="grow"><span class="t">${esc(g.name)}</span><div class="bar" style="margin-top:6px"><i style="width:${m || 0}%"></i></div></span><button class="btn soft sm" data-act="train-skill" data-id="${id}">${ic('play')}10 Q</button></div>`; }).join('');
   Cur = { lessonOf: chId };
-  openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('back')}</button><div class="ttl">${esc(ch.title)}</div></div><article class="lesson"><p class="eyebrow">${esc(SUB[ch.sub].name)} · cours</p><h2>${esc(ch.title)}</h2>${ch.lesson}</article><div class="sec" style="margin-top:24px"><div class="sec-h"><h3>Exercices de ce chapitre</h3></div><button class="btn block" data-act="train-ch" data-ch="${chId}">${ic('play')}S'entraîner sur tout le chapitre (10 questions)</button><div class="list">${skills}</div></div>`, ch.sub);
+  const gds = guidesOf(chId);
+  const gHtml = gds.length ? `<div class="sec" style="margin-top:24px"><div class="sec-h"><h3>Exercices guidés pas à pas</h3></div><p class="small muted">Le problème est découpé en étapes : tu tapes chaque résultat, avec un indice si tu bloques. Idéal juste après le cours.</p><div class="list">${gds.map((g) => `<button class="li" data-act="guide" data-id="${g.id}"><span class="idx sub">${ic('play')}</span><span class="grow"><span class="t">${esc(g.name)}</span></span>${ic('chev', 'chev')}</button>`).join('')}</div></div>` : '';
+  openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('back')}</button><div class="ttl">${esc(ch.title)}</div></div><article class="lesson"><p class="eyebrow">${esc(SUB[ch.sub].name)} · cours</p><h2>${esc(ch.title)}</h2>${ch.lesson}</article>${gHtml}<div class="sec" style="margin-top:24px"><div class="sec-h"><h3>Exercices de ce chapitre</h3></div><button class="btn block" data-act="train-ch" data-ch="${chId}">${ic('play')}S'entraîner sur tout le chapitre (10 questions)</button><div class="list">${skills}</div></div>`, ch.sub);
+}
+
+/* ---- 86-extra.js ---- */
+/* ===== Exercices guidés, fiches mémo, test de positionnement, cours en aperçu, stratégie ===== */
+
+/* ---------- Exercice guidé ---------- */
+class GuideSession {
+  constructor(o) { this.id = o.id; this.def = TM.guides[o.id]; this.task = o.task || null; }
+  start() {
+    Cur = this; this.data = this.def.make(makeRng(newSeed())); this.k = 0; this.input = ''; this.tries = 0; this.done = []; this.t0 = Date.now(); this.finished = false; this.msg = '';
+    this.render();
+    this.onKey = (e) => {
+      if (e.target && /input|textarea/i.test(e.target.tagName)) return;
+      const k = e.key;
+      if (/^[0-9]$/.test(k)) this.key(k); else if (k === ',' || k === '.') this.key(','); else if (k === '-') this.key('-'); else if (k === '/') this.key('/');
+      else if (k === 'Backspace') this.key('del'); else if (k === 'Enter') this.key('ok'); else return;
+      e.preventDefault();
+    };
+    document.addEventListener('keydown', this.onKey);
+  }
+  stop() { document.removeEventListener('keydown', this.onKey); }
+  render() {
+    const d = this.data, n = d.steps.length;
+    const rows = this.done.map((x, i) => `<div class="gstep done"><span class="idx done">${ic('check')}</span><div class="grow"><div class="small muted">${d.steps[i].p}</div><b class="num">${esc(x.a)}${d.steps[i].u ? ' ' + d.steps[i].u : ''}</b>${x.helped ? ' <span class="pill warn">avec aide</span>' : ''}</div></div>`).join('');
+    let cur = '';
+    if (!this.finished) {
+      const st = d.steps[this.k];
+      cur = `<div class="gstep cur"><p class="eyebrow">Étape ${this.k + 1} sur ${n}</p><p class="gprompt">${st.p}</p><div class="row" style="justify-content:center;gap:8px"><div class="drill-answer num" id="gans">${esc(this.input) || '&nbsp;'}</div>${st.u ? `<span class="muted">${st.u}</span>` : ''}</div><div id="gmsg" class="small center" aria-live="polite">${this.msg}</div>${this.tries ? `<div class="tip"><b>Indice :</b> ${st.hint || 'Relis l\'énoncé.'}</div>` : ''}</div>
+<div class="keypad"><button data-act="gk" data-k="7">7</button><button data-act="gk" data-k="8">8</button><button data-act="gk" data-k="9">9</button><button class="k-fn" data-act="gk" data-k="del" aria-label="Effacer">⌫</button><button data-act="gk" data-k="4">4</button><button data-act="gk" data-k="5">5</button><button data-act="gk" data-k="6">6</button><button class="k-ok" data-act="gk" data-k="ok">OK</button><button data-act="gk" data-k="1">1</button><button data-act="gk" data-k="2">2</button><button data-act="gk" data-k="3">3</button><button data-act="gk" data-k=",">,</button><button data-act="gk" data-k="-">−</button><button data-act="gk" data-k="0">0</button><button data-act="gk" data-k="/">/</button></div>
+<div class="btns" style="margin-top:10px"><button class="btn soft sm" data-act="g-hint">${ic('spark')}Indice</button><button class="btn ghost sm" data-act="g-show">Voir la réponse</button></div>`;
+    } else {
+      const clean = this.done.filter((x) => !x.helped).length;
+      cur = `<div class="fb ok"><div class="fb-h">${ic('check')}<span>Exercice terminé · ${clean}/${n} étapes sans aide</span></div><div class="expl"><p>${d.end}</p></div></div><div class="btns"><button class="btn" data-act="g-again">${ic('repeat')}Un autre exercice du même type</button><button class="btn ghost" data-act="g-qcm">${ic('play')}Passer aux QCM du chapitre</button></div>`;
+    }
+    openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('close')}</button><div class="ttl">Exercice guidé · ${esc(this.def.name)}</div></div><div class="stack"><div class="qcard"><div class="qmeta"><span class="pill sub">${esc(TM.chapters[this.def.ch].short)}</span><span class="pill">pas à pas</span></div><div class="qtext">${d.q}</div></div>${rows}${cur}</div>`, 'calcul');
+    const a = $('.gstep.cur'); if (a) a.scrollIntoView({ block: 'nearest' });
+  }
+  upd(cls) { const a = $('#gans'); if (a) { a.textContent = this.input || ' '; a.className = 'drill-answer num' + (cls ? ' ' + cls : ''); } }
+  key(k) {
+    if (this.finished || this.busy) return;
+    if (k === 'del') { this.input = this.input.slice(0, -1); return this.upd(); }
+    if (k === 'ok') return this.submit();
+    if (this.input.length >= 14) return;
+    if (k === '-' && this.input) return;
+    this.input += k; this.upd();
+    if (sameAns(this.input, this.data.steps[this.k].a) && !/[,/]$/.test(this.input)) this.ok();
+  }
+  submit() {
+    if (!this.input) return;
+    if (sameAns(this.input, this.data.steps[this.k].a)) return this.ok();
+    this.tries++; this.msg = this.tries >= 2 ? 'Toujours pas. Utilise l\'indice ou affiche la réponse.' : 'Pas tout à fait : regarde l\'indice.';
+    this.input = ''; this.render(); this.upd('flash-ko');
+  }
+  ok() {
+    this.busy = true; this.upd('flash-ok');
+    setTimeout(() => { this.busy = false; this.done.push({ a: this.input, helped: this.tries >= 2 }); this.next(); }, 350);
+  }
+  hint() { if (!this.tries) { this.tries = 1; this.msg = ''; this.render(); } }
+  show() { const st = this.data.steps[this.k]; this.done.push({ a: st.a, helped: true }); this.next(); }
+  next() {
+    this.k++; this.input = ''; this.tries = 0; this.msg = '';
+    if (this.k >= this.data.steps.length) return this.finish();
+    this.render();
+  }
+  finish() {
+    this.finished = true; this.stop();
+    const n = this.data.steps.length, clean = this.done.filter((x) => !x.helped).length;
+    const g = Store.S.guides || (Store.S.guides = {});
+    const s = g[this.id] || (g[this.id] = { n: 0, clean: 0, last: 0 });
+    s.n++; if (clean === n) s.clean++; s.last = Date.now();
+    addDay(n, clean, Date.now() - this.t0);
+    saveSession({ t: Date.now(), sub: 'calcul', mode: 'guide', guide: this.id, n, ok: clean, sc: null, ms: Date.now() - this.t0, task: this.task });
+    this.render(); render();
+  }
+}
+function startGuide(id, task) { new GuideSession({ id, task }).start(); }
+
+/* ---------- Fiches mémo ---------- */
+class CardSession {
+  constructor(o) { this.queue = cardQueue(o.decks || null, o.max || 15); this.i = 0; this.flipped = false; this.know = 0; this.task = o.task || null; this.title = o.title || 'Fiches mémo'; this.t0 = Date.now(); }
+  start() {
+    if (!this.queue.length) return toast('Tout est révisé pour aujourd\'hui. Reviens demain !');
+    Cur = this; this.render();
+  }
+  render() {
+    const c = this.queue[this.i], n = this.queue.length;
+    const sub = c.deck.sub;
+    openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('close')}</button><div class="ttl">${esc(this.title)} <span class="faint num">· ${this.i + 1}/${n}</span></div></div><div class="progress" aria-hidden="true"><i style="width:${Math.round(this.i / n * 100)}%"></i></div><div class="stack" style="margin-top:14px"><p class="eyebrow center">${esc(c.deck.name)}</p><button class="flash${this.flipped ? ' on' : ''}" data-act="flip" aria-label="Retourner la carte"><span class="ff">${c.f}</span>${this.flipped ? `<span class="fb2">${c.b}</span>` : '<span class="small faint">Touche pour voir la réponse</span>'}</button>${this.flipped ? `<div class="btns"><button class="btn ghost" data-act="rate" data-k="0">${ic('repeat')}À revoir</button><button class="btn" data-act="rate" data-k="1">${ic('check')}Je savais</button></div>` : `<button class="btn block" data-act="flip">Voir la réponse</button>`}<p class="small faint center">Sois honnête : une carte « à revoir » revient plus souvent, c'est comme ça qu'on mémorise.</p></div>`, sub);
+  }
+  flip() { if (!this.flipped) { this.flipped = true; this.render(); } }
+  rate(knew) {
+    const c = this.queue[this.i];
+    rateCard(c.id, knew);
+    if (knew) this.know++;
+    else if (!c.again) this.queue.push(Object.assign({}, c, { again: true }));
+    this.i++; this.flipped = false;
+    if (this.i >= this.queue.length) return this.finish();
+    this.render();
+  }
+  finish() {
+    const n = this.queue.filter((c) => !c.again).length;
+    addDay(0, 0, Date.now() - this.t0);
+    saveSession({ t: Date.now(), sub: null, mode: 'cards', n, ok: this.know, sc: null, ms: Date.now() - this.t0, task: this.task });
+    openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('close')}</button><div class="ttl">Fiches terminées</div></div><div class="stack-lg"><div class="result-hero"><p class="eyebrow">Fiches mémo</p><div class="scorebig">${this.know}<small>/${n}</small></div><p class="muted">cartes sues du premier coup</p></div><p class="center muted">Les cartes ratées reviendront plus tôt. Une série de fiches par jour suffit pour tout retenir d'ici au test.</p><div class="btns"><button class="btn" data-act="cards-all">${ic('repeat')}Encore 15 cartes</button><button class="btn ghost" data-act="close">Terminer</button></div></div>`);
+    render();
+  }
+}
+function vFiches() {
+  const dueAll = TM.decks.reduce((a, d) => a + deckStats(d).due, 0);
+  const groups = SUBS.map((s) => ({ s, decks: TM.decks.filter((d) => d.sub === s.id) })).filter((g) => g.decks.length);
+  return `<main class="sheet home"><div class="stack-lg"><div class="sec"><p class="eyebrow">Mémorisation</p><h2>Fiches mémo</h2><p class="small muted">Des cartes recto-verso pour réviser en 5 minutes, dans les transports par exemple. Les cartes que tu sais reviennent de moins en moins souvent, celles que tu rates reviennent vite.</p></div><button class="btn block" data-act="cards-all">${ic('play')}${dueAll ? `Réviser ${Math.min(15, dueAll)} cartes à revoir` : 'Apprendre 15 nouvelles cartes'}</button>${groups.map(({ s, decks }) => `<div class="sec" style="--sub:${s.color}"><p class="mtitle"><i></i>${s.name}</p><div class="list">${decks.map((d) => { const st = deckStats(d); return `<button class="li" data-act="cards" data-id="${d.id}"><span class="grow"><span class="t">${esc(d.name)}</span><br><span class="s">${esc(d.desc)} · ${st.mastered}/${st.total} maîtrisées${st.due ? ` · <b>${st.due} à revoir</b>` : ''}</span><div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * st.mastered / st.total)}%"></i></div></span>${ic('chev', 'chev')}</button>`; }).join('')}</div></div>`).join('')}</div></main>`;
+}
+
+/* ---------- Test de positionnement ---------- */
+function startDiag() {
+  const R = makeRng(newSeed()), qs = [];
+  ['pct.evol', 'frac.add', 'vit.v', 'eq.lin'].forEach((id, i) => qs.push(buildQ(id, newSeed(), i < 2 ? 1 : 2)));
+  R.sample(gensOf('cm').map((g) => g.id), 3).forEach((id) => qs.push(buildQ(id, newSeed(), 2)));
+  ['log.num', 'log.domino', 'log.let'].forEach((id) => qs.push(buildQ(id, newSeed(), 2)));
+  const txt = cdtTexts(1)[0]; if (txt) txt.slice(0, 3).forEach((q) => qs.push(q));
+  ['ra.concl', 'ra.hyp', 'ra.faille', 'expr.accords', 'expr.conjug', 'expr.paro'].forEach((id) => qs.push(buildQ(id, newSeed(), 2)));
+  new Session({ mode: 'exam', diag: true, title: 'Test de positionnement', sub: null, n: qs.length, qs, limit: 30 * 60 }).start();
+}
+function diagResults(sess) {
+  const r = sess.res, by = {};
+  r.qs.forEach((q, k) => { const b = by[q.sub] || (by[q.sub] = { ok: 0, n: 0 }); b.n++; if (r.ans[k] === q.answer) b.ok++; });
+  Store.S.diag = { t: Date.now(), by };
+  Store.S.profile.seenIntro = true;
+  Store.save('main');
+  const order = OFFICIAL_ORDER.filter((s) => by[s]).sort((a, b) => by[a].ok / by[a].n - by[b].ok / by[b].n);
+  const rows = OFFICIAL_ORDER.filter((s) => by[s]).map((s) => { const b = by[s], p = b.ok / b.n; return `<button class="li" data-act="nav" data-v="${SUB[s].hash}" style="--sub:${SUB[s].color}"><span class="idx sub">${SUB[s].abbr.slice(0, 3)}</span><span class="grow"><span class="t">${SUB[s].name}</span><div class="bar" style="margin-top:6px"><i style="width:${Math.round(p * 100)}%"></i></div></span><span class="num"><b>${b.ok}</b><span class="faint">/${b.n}</span></span></button>`; }).join('');
+  const prio = order.slice(0, 3).map((s, i) => `<li><b>${SUB[s].name}</b> : ${i === 0 ? 'ta priorité absolue, commence par les cours de cet onglet.' : i === 1 ? 'à travailler juste après.' : 'à consolider régulièrement.'}</li>`).join('');
+  openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('close')}</button><div class="ttl">Ton point de départ</div></div><div class="stack-lg"><div class="result-hero"><p class="eyebrow">Test de positionnement</p><div class="scorebig">${r.ok}<small>/${r.n}</small></div><p class="muted">Ce n'est pas une note : c'est une photo de ton niveau aujourd'hui.</p></div><div class="list">${rows}</div><div class="sec"><h3>Par où commencer</h3><ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">${prio}</ol><p class="small muted">Le programme du jour tient compte de ces résultats, et la difficulté s'ajuste toute seule.</p></div><div class="btns"><button class="btn" data-act="rev-q" data-k="0">Voir les corrections</button><button class="btn ghost" data-act="close">Terminer</button></div></div>`);
+  render();
+}
+
+/* ---------- Cours en aperçu (sans quitter la séance) ---------- */
+function openPeek(chId) {
+  const ch = TM.chapters[chId]; if (!ch) return;
+  let el = $('#peek');
+  if (!el) { el = document.createElement('div'); el.id = 'peek'; document.body.appendChild(el); }
+  el.className = 'layer peek';
+  el.style.setProperty('--sub', SUB[ch.sub].color);
+  el.innerHTML = `<div class="layer-in"><div class="lbar"><button class="iconbtn" data-act="peek-close" aria-label="Revenir à la question">${ic('back')}</button><div class="ttl">${esc(ch.title)}</div></div><article class="lesson"><p class="eyebrow">Cours · ${esc(SUB[ch.sub].name)}</p>${ch.lesson}</article><button class="btn block" style="margin-top:20px" data-act="peek-close">${ic('back')}Revenir à la question</button></div>`;
+  el.hidden = false; el.scrollTop = 0;
+}
+function closePeek() { const el = $('#peek'); if (el) { el.hidden = true; el.innerHTML = ''; } }
+
+/* ---------- Stratégie le jour J ---------- */
+const STRATEGY_HTML = `
+<p>Le Tage Mage se gagne aussi sur la <b>méthode</b> : les candidats qui ont un plan pour chaque minute gagnent facilement 30 à 50 points.</p>
+<h3><span class="hl">1. Le format en un coup d'œil</span></h3>
+<ul><li>6 sous-tests de 15 questions, <b>20 minutes chacun</b> : le temps ne se reporte pas d'un sous-test à l'autre.</li><li>QCM à 5 réponses, <b>sans calculatrice</b>.</li><li>Chaque sous-test est noté sur 60 ; le score sur 600 est la moyenne des 6 notes multipliée par 10. Pour 400, il faut en moyenne 40/60, soit environ 10 bonnes réponses sur 15.</li></ul>
+<h3><span class="hl">2. Gérer ses 20 minutes</span></h3>
+<ul><li><b>80 secondes par question</b> en moyenne. Regarde le chrono toutes les 5 questions : à la question 5, il devrait rester environ 13 minutes.</li><li><b>Règle des 90 secondes</b> : si tu sèches au-delà, coche ta meilleure réponse et passe. Une question difficile ne rapporte pas plus qu'une facile.</li><li>Garde 1 minute à la fin pour remplir les cases vides.</li></ul>
+<h3><span class="hl">3. Répondre à tout ?</span></h3>
+<p>Avec le barème sans pénalité (annoncé depuis 2025), <b>ne laisse jamais une case vide</b> : au hasard tu as 1 chance sur 5, et 1 sur 2 si tu as éliminé trois réponses. Si le barème −1 s'appliquait encore, réponds dès que tu as éliminé au moins une réponse. Vérifie le barème en vigueur sur le site officiel avant le test.</p>
+<h3><span class="hl">4. Sous-test par sous-test</span></h3>
+<ul><li><b>Calcul</b> : lis les 5 réponses avant de calculer, élimine avec les unités et l'ordre de grandeur, teste les réponses dans l'énoncé.</li><li><b>Conditions minimales</b> : (1) seule, (2) seule, puis ensemble. Ne calcule jamais jusqu'au bout.</li><li><b>Logique</b> : écarts, une case sur deux, modulo 7 pour les dominos. Ne reste pas bloqué sur une figure.</li><li><b>Compréhension</b> : ton point fort. Survole les questions, lis une fois, reviens au passage précis.</li><li><b>Raisonnement & Argumentation</b> : trouve la conclusion avant de lire les réponses.</li><li><b>Expression</b> : questions rapides, vise 45 secondes pour gagner du temps de réflexion sur les plus dures.</li></ul>
+<h3><span class="hl">5. Les 7 derniers jours</span></h3>
+<ul><li>Un Tage Mage blanc complet en début de semaine, dans les conditions réelles.</li><li>Ensuite : cahier d'erreurs et fiches mémo chaque jour, pas de nouveau chapitre.</li><li>La veille : 20 minutes de fiches mémo, puis repos. Prépare ce que demande ta convocation (pièce d'identité notamment).</li><li>Le jour J : arrive en avance ; après chaque sous-test, oublie-le et concentre-toi sur le suivant.</li></ul>
+<div class="tip"><b>Ton plan pour 400 :</b> sécuriser 50+ en Compréhension, viser 40+ en Expression et en Raisonnement, et remonter Calcul, Conditions minimales et Logique au-dessus de 30. C'est exactement ce que ton programme du jour travaille.</div>`;
+function openStrategy() {
+  Cur = { strategy: true };
+  openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('back')}</button><div class="ttl">Stratégie le jour J</div></div><article class="lesson"><p class="eyebrow">Méthode</p><h2>Stratégie le jour J</h2>${STRATEGY_HTML}</article>`);
 }
 
 /* ---- 90-ui.js ---- */
 /* ===== Interface : accueil, onglets, cahier d'erreurs, stats, prof, réglages ===== */
-const VIEWS = ['accueil', ...SUBS.map((s) => s.hash), 'erreurs', 'stats', 'prof', 'reglages'];
+const VIEWS = ['accueil', ...SUBS.map((s) => s.hash), 'erreurs', 'stats', 'prof', 'reglages', 'fiches'];
 const HASH2SUB = Object.fromEntries(SUBS.map((s) => [s.hash, s.id]));
 function currentView() { const h = (location.hash || '').replace('#', ''); return VIEWS.includes(h) ? h : 'accueil'; }
 function go(view) { if (location.hash !== '#' + view) location.hash = view; else render(); }
@@ -3960,6 +4679,7 @@ function render() {
   else if (v === 'erreurs') body = vErrors();
   else if (v === 'stats') body = vStats();
   else if (v === 'prof') body = vProf();
+  else if (v === 'fiches') body = vFiches();
   else body = vSettings();
   app.style.setProperty('--sub', sub ? SUB[sub].color : 'var(--ink)');
   app.innerHTML = head + body;
@@ -3975,7 +4695,7 @@ function ringSVG(frac) {
 }
 function vHome(due) {
   const S = Store.S, p = S.profile, pt = projectTotal();
-  const intro = !p.seenIntro ? `<div class="notice"><b>Bienvenue dans ton appli Tage Mage.</b> Chaque onglet correspond à un sous-test : cours, exercices infinis, épreuves chronométrées. Commence par le programme du jour ci-dessous, il s'adapte à ton niveau au fil des séances.<div class="btns" style="margin-top:10px"><button class="btn sm" data-act="intro-ok">C'est parti</button></div></div>` : '';
+  const intro = !p.seenIntro ? `<div class="notice"><b>Bienvenue dans ton appli Tage Mage.</b> Chaque onglet correspond à un sous-test : cours, exercices infinis, épreuves chronométrées. Commence par le programme du jour ci-dessous, il s'adapte à ton niveau au fil des séances.<div class="btns" style="margin-top:10px"><button class="btn sm" data-act="diag">${ic('target')}Test de positionnement (15 min)</button><button class="btn ghost sm" data-act="intro-ok">Plus tard</button></div></div>` : '';
   const sync = Store.syncNote ? `<div class="notice warn">${esc(Store.syncNote)}</div>` : '';
   const minis = SUBS.map((s, i) => `<button class="mini" style="--sub:${s.color}" data-act="nav" data-v="${s.hash}"><span class="n">${s.short}</span><span class="v num">${pt.vals[i] != null ? pt.vals[i] : '—'}<small>/60</small></span></button>`).join('');
   const total = pt.total;
@@ -3983,8 +4703,10 @@ function vHome(due) {
   const proj = `<div class="proj"><div class="ring">${ringSVG(total != null ? total / p.target : 0)}<div class="lbl"><b>${total != null ? total : '—'}</b><span>/600 estimé</span></div></div><div class="stack" style="gap:6px"><p class="eyebrow">Projection</p><p><b>Objectif ${p.target}</b>${total != null ? ` · ${total >= p.target ? 'atteint !' : `encore ${p.target - total} points`}` : ''}</p><p class="small muted">${total != null ? `Calculée sur ${pt.known} sous-test${pt.known > 1 ? 's' : ''} travaillé${pt.known > 1 ? 's' : ''}.` : 'Réponds à quelques questions dans au moins deux sous-tests pour voir ton score estimé.'}${days != null ? ` <b>${days > 0 ? `J-${days}` : days === 0 ? 'C\'est le jour J !' : 'Date passée'}</b>` : ''}</p></div></div><div class="minis">${minis}</div>`;
   const tasks = dailyPlan();
   const doneN = tasks.filter((t) => t.done).length;
-  const plan = `<div class="sec"><div class="sec-h"><h2>Programme du jour</h2><span class="pill ${doneN === tasks.length ? 'ok' : ''}">${doneN}/${tasks.length}</span></div><div class="list">${tasks.map((t, i) => `<button class="task${t.done ? ' done' : ''}" data-act="task" data-i="${i}" style="--sub:${t.sub ? SUB[t.sub].color : 'var(--ink-3)'}"><span class="check${t.done ? ' on' : ''}">${t.done ? ic('check') : ''}</span><span class="grow"><span class="t">${esc(t.t)}</span><br><span class="s">${esc(t.s)}</span></span>${ic('chev', 'chev')}</button>`).join('')}</div></div>`;
-  const tiles = `<div class="tiles"><button class="tile" data-act="mock" style="--sub:var(--calc)">${ic('exam')}<span class="t">Tage Mage blanc</span><span class="s">6 × 20 min, score /600</span></button><button class="tile" data-act="nav" data-v="erreurs" style="--sub:var(--expr)">${ic('repeat')}<span class="t">Cahier d'erreurs</span><span class="s">${due ? `${plural(due, 'question')} à revoir` : 'Rien à revoir aujourd\'hui'}</span></button><button class="tile" data-act="nav" data-v="stats" style="--sub:var(--cdt)">${ic('chart')}<span class="t">Statistiques</span><span class="s">Progression et points faibles</span></button>${AI.available() ? `<button class="tile" data-act="nav" data-v="prof" style="--sub:var(--log)">${ic('spark')}<span class="t">Prof IA</span><span class="s">Pose tes questions</span></button>` : `<button class="tile" data-act="drill-quick" style="--sub:var(--ra)">${ic('bolt')}<span class="t">Série express</span><span class="s">60 s de calcul mental</span></button>`}</div>`;
+  const today = S.days[dayKey()], minToday = today ? Math.round(today.ms / 60000) : 0;
+  const plan = `<div class="sec"><div class="sec-h"><h2>Programme du jour</h2><span class="pill ${doneN === tasks.length ? 'ok' : ''}">${doneN}/${tasks.length}</span></div><div class="row small muted"><span class="grow">Aujourd'hui : <b class="num">${minToday}</b> min sur ${p.dailyMin} min visées</span></div><div class="bar ok" aria-hidden="true"><i style="width:${Math.min(100, Math.round(100 * minToday / p.dailyMin))}%"></i></div><div class="list">${tasks.map((t, i) => `<button class="task${t.done ? ' done' : ''}" data-act="task" data-i="${i}" style="--sub:${t.sub ? SUB[t.sub].color : 'var(--ink-3)'}"><span class="check${t.done ? ' on' : ''}">${t.done ? ic('check') : ''}</span><span class="grow"><span class="t">${esc(t.t)}</span><br><span class="s">${esc(t.s)}</span></span>${ic('chev', 'chev')}</button>`).join('')}</div></div>`;
+  const dueCards = TM.decks.reduce((a, d) => a + deckStats(d).due, 0);
+  const tiles = `<div class="tiles"><button class="tile" data-act="nav" data-v="fiches" style="--sub:var(--ra)">${ic('book')}<span class="t">Fiches mémo</span><span class="s">${dueCards ? `${plural(dueCards, 'carte')} à revoir` : '5 min par jour'}</span></button>${!S.diag ? `<button class="tile" data-act="diag" style="--sub:var(--cm)">${ic('target')}<span class="t">Test de positionnement</span><span class="s">19 questions, ton point de départ</span></button>` : ''}<button class="tile" data-act="strategy" style="--sub:var(--cdt)">${ic('flag')}<span class="t">Stratégie jour J</span><span class="s">Gestion du temps, réponses</span></button><button class="tile" data-act="mock" style="--sub:var(--calc)">${ic('exam')}<span class="t">Tage Mage blanc</span><span class="s">6 × 20 min, score /600</span></button><button class="tile" data-act="nav" data-v="erreurs" style="--sub:var(--expr)">${ic('repeat')}<span class="t">Cahier d'erreurs</span><span class="s">${due ? `${plural(due, 'question')} à revoir` : 'Rien à revoir aujourd\'hui'}</span></button><button class="tile" data-act="nav" data-v="stats" style="--sub:var(--cdt)">${ic('chart')}<span class="t">Statistiques</span><span class="s">Progression et points faibles</span></button>${AI.available() ? `<button class="tile" data-act="nav" data-v="prof" style="--sub:var(--log)">${ic('spark')}<span class="t">Prof IA</span><span class="s">Pose tes questions</span></button>` : `<button class="tile" data-act="drill-quick" style="--sub:var(--ra)">${ic('bolt')}<span class="t">Série express</span><span class="s">60 s de calcul mental</span></button>`}</div>`;
   const scoring = `<p class="small faint">Barème utilisé : ${scoringPenalty() ? '+4 / −1 / 0' : '+4 / 0 / 0, sans pénalité (format annoncé depuis 2025)'} · <button class="linkbtn" data-act="nav" data-v="reglages">modifier</button></p>`;
   return `<main class="sheet home"><div class="stack-lg">${intro}${sync}${proj}${plan}${tiles}${scoring}</div></main>`;
 }
@@ -4021,6 +4743,10 @@ function vSub(sub) {
   if (sub === 'calcul' || sub === 'logique') {
     const ids = Object.values(TM.drills).filter((d) => d.sub === sub).map((d) => d.id);
     extra += `<div class="sec"><div class="sec-h"><h2>${sub === 'calcul' ? 'Calcul mental chronométré' : 'Réflexes de logique'}</h2>${sub === 'calcul' ? '<button class="btn soft sm" data-act="drill-quick">Série express</button>' : ''}</div><p class="small muted">${sub === 'calcul' ? 'Des séries de 60 secondes où tu tapes la réponse. Objectif : gagner en vitesse sur les automatismes. Le niveau monte tout seul quand tu es prêt.' : 'Pour reconnaître les lettres et les écarts en un éclair.'}</p><div class="drills">${ids.map((id) => { const d = TM.drills[id], rec = Store.S.drills[id]; return `<button class="drill" data-act="drill" data-id="${id}"><span class="t">${esc(d.name)}</span><span class="s">${esc(d.desc)}</span><span class="rec">${rec && rec.best ? `Record ${rec.best}/min · niv. ${rec.lvl || 1}` : 'Pas encore tenté'}</span></button>`; }).join('')}</div></div>`;
+  }
+  if (sub === 'calcul') {
+    const G = Store.S.guides || {};
+    extra += `<div class="sec"><div class="sec-h"><h2>Exercices guidés pas à pas</h2></div><p class="small muted">Pour comprendre la méthode : le problème est découpé en étapes, tu tapes chaque résultat intermédiaire, avec un indice si tu bloques.</p><div class="drills">${Object.values(TM.guides).map((g) => `<button class="drill" data-act="guide" data-id="${g.id}"><span class="t">${esc(g.name)}</span><span class="s">${esc(TM.chapters[g.ch].short)}</span><span class="rec">${G[g.id] ? `Fait ${G[g.id].n} fois` : 'Pas encore fait'}</span></button>`).join('')}</div></div>`;
   }
   if (['ra', 'expr', 'cdt'].includes(sub)) {
     const pool = (Store.A[sub] || []).length;
@@ -4171,6 +4897,7 @@ function runTask(t) {
   if (a.type === 'chapter') { if (!Store.S.lessons[a.ch]) { openLesson(a.ch); Cur = { lessonOf: a.ch, task: t.id }; return; } return startTraining('calcul', { ch: a.ch, task: t.id }); }
   if (a.type === 'train') return startTraining(a.sub, { task: t.id });
   if (a.type === 'exam') return startExam(a.sub, t.id);
+  if (a.type === 'cards') return new CardSession({ max: 10, task: t.id }).start();
 }
 async function aiGenerate(sub) {
   if (!AI.available()) return toast('L\'IA n\'est pas disponible ici.');
@@ -4233,6 +4960,20 @@ function onClick(e) {
     case 'ai-gen': aiGenerate(d.sub); break;
     case 'ai-use': { const pool = (Store.A[d.sub] || []); if (d.sub === 'cdt') { const sets = aiTextSets(); if (sets.length) startAISet('cdt', sets[0], 'Texte · ' + toPlainTitle(sets[0][0].passageTitle)); } else startAISet(d.sub, pool.slice(0, 5)); break; }
     case 'coach': runCoach(); break;
+    case 'guide': startGuide(d.id); break;
+    case 'gk': if (Cur instanceof GuideSession) Cur.key(d.k); break;
+    case 'g-hint': if (Cur instanceof GuideSession) Cur.hint(); break;
+    case 'g-show': if (Cur instanceof GuideSession) Cur.show(); break;
+    case 'g-again': if (Cur instanceof GuideSession) startGuide(Cur.id, null); break;
+    case 'g-qcm': if (Cur instanceof GuideSession) { const ch = TM.guides[Cur.id].ch; startTraining('calcul', { ch }); } break;
+    case 'cards': new CardSession({ decks: [d.id], title: (TM.decks.find((x) => x.id === d.id) || {}).name }).start(); break;
+    case 'cards-all': new CardSession({}).start(); break;
+    case 'flip': if (Cur instanceof CardSession) Cur.flip(); break;
+    case 'rate': if (Cur instanceof CardSession) Cur.rate(d.k === '1'); break;
+    case 'diag': startDiag(); break;
+    case 'peek': openPeek(d.ch); break;
+    case 'peek-close': closePeek(); break;
+    case 'strategy': openStrategy(); break;
     case 'chip': sendChat(PROF_CHIPS[+d.i]); break;
     case 'chat-clear': Store.C.msgs = []; Store.save('chat'); render(); break;
     case 'clear-mastered': { const E = Store.E.items; Object.keys(E).forEach((k) => { if (E[k].box >= 6) delete E[k]; }); Store.save('errors'); render(); toast('Questions maîtrisées supprimées.'); break; }

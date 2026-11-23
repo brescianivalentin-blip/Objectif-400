@@ -538,3 +538,15 @@ svg.chev { width: 18px; height: 18px; color: var(--ink-3); flex: 0 0 auto; }
 .pill svg, .linkbtn svg { width: 14px; height: 14px; }
 .task .grow, .li .grow { min-width: 0; }
 .modal-bg { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+/* Exercices guidés */
+.gstep { display: flex; gap: 10px; align-items: flex-start; background: var(--card); border: 1px solid var(--rule); border-radius: 13px; padding: 12px 13px; }
+.gstep.done { background: var(--card-2); }
+.gstep.cur { flex-direction: column; align-items: stretch; gap: 10px; border-color: var(--sub); box-shadow: 0 0 0 1px var(--sub); }
+.gprompt { font-size: 16px; line-height: 1.5; }
+/* Fiches mémo */
+.flash { width: 100%; min-height: 230px; border-radius: 18px; border: 1px solid var(--rule); background: var(--card); box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 22px; text-align: center; color: var(--ink); }
+.flash .ff { font-family: var(--f-display); font-weight: 700; font-size: 26px; line-height: 1.25; }
+.flash .fb2 { font-size: 18px; line-height: 1.45; padding-top: 14px; border-top: 2px dashed var(--rule); width: 100%; }
+.flash.on { border-color: var(--sub); }
+/* Cours en aperçu au-dessus d'une séance */
+.layer.peek { z-index: 70; }

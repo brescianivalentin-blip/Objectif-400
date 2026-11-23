@@ -149,7 +149,7 @@ self.addEventListener('fetch', (e) => {{
     make_icons()
 
     # --- Bundle de test (sans démarrage ni DOM) ---
-    test = "'use strict';\nconst window = undefined;\n" + bundle(exclude=('99-boot.js',)) + "\nlinkGens();\nmodule.exports = { TM, buildQ, bankQ, rebuild, Store, normAns, recordAnswer, projectSub, projectTotal, examQuestions, dailyPlan, nextTrainingQ, genIdsFor, dueErrors, addError, reviewDone, makeRng, fmt, Fr, SUBS, CM_CHOICES, statsSummary, cdtTexts, chaptersOf };\n"
+    test = "'use strict';\nconst window = undefined;\n" + bundle(exclude=('99-boot.js',)) + "\nlinkGens();\nmodule.exports = { TM, sameAns, parseNum, cardQueue, buildQ, bankQ, rebuild, Store, normAns, recordAnswer, projectSub, projectTotal, examQuestions, dailyPlan, nextTrainingQ, genIdsFor, dueErrors, addError, reviewDone, makeRng, fmt, Fr, SUBS, CM_CHOICES, statsSummary, cdtTexts, chaptersOf };\n"
     (DIST / 'test-bundle.js').write_text(test, encoding='utf-8')
     print(f'Build {version} : app.js {len(app) // 1024} Ko')
 

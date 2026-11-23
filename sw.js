@@ -1,6 +1,6 @@
 /* Service worker d'Objectif 400 : fonctionne hors connexion */
-const CACHE = 'o400-c775fa5333';
-const ASSETS = ['./', './index.html', './app.js?v=c775fa5333', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
+const CACHE = 'o400-1f23a1788c';
+const ASSETS = ['./', './index.html', './app.js?v=1f23a1788c', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

@@ -73,6 +73,26 @@ for (const [sub, list] of Object.entries(TM.banks)) {
   }
 }
 
+// 3b) Exercices guidés
+for (const g of Object.values(TM.guides || {})) {
+  for (let i = 0; i < N; i++) {
+    checks++;
+    let d;
+    try { d = g.make(makeRng(9000 + i * 13)); } catch (e) { fail(g.id, 'exception ' + e.message); continue; }
+    if (!d.q || !Array.isArray(d.steps) || !d.steps.length || !d.end) { fail(g.id, 'structure incomplète'); continue; }
+    if (BAD.test(plain(d.q + d.end))) fail(g.id, 'texte cassé : ' + plain(d.q + d.end).slice(0, 120));
+    d.steps.forEach((st, k) => {
+      const a = String(st.a);
+      if (!a || BAD.test(a) || BAD.test(plain(st.p)) || BAD.test(plain(st.hint || ''))) fail(g.id, `étape ${k + 1} : ${plain(st.p)} = ${a}`);
+      if (!B.sameAns(a, a)) fail(g.id, `étape ${k + 1} : réponse non reconnue « ${a} »`);
+      if (a.length > 14) fail(g.id, `étape ${k + 1} : réponse trop longue ${a}`);
+      if (/,\d{4,}/.test(a)) fail(g.id, `étape ${k + 1} : réponse à décimales infinies ${a}`);
+    });
+  }
+}
+// 3c) Fiches mémo
+for (const dk of TM.decks || []) { checks++; dk.cards.forEach((c) => { if (!plain(c.f) || !plain(c.b) || BAD.test(plain(c.f + ' ' + c.b))) fail('deck-' + dk.id, `carte vide ou cassée : ${c.id}`); }); }
+
 // 4) Épreuves et programme
 for (const s of B.SUBS) {
   for (let r = 0; r < 20; r++) {
@@ -94,5 +114,6 @@ console.log('\nRépartition des bonnes réponses (A B C D E) par sous-test :');
 for (const [k, v] of Object.entries(answerPos)) { const t = v.reduce((a, b) => a + b, 0); console.log(`  ${k.padEnd(8)} ${v.map((x) => Math.round(100 * x / t).toString().padStart(3) + '%').join(' ')}`); }
 const mm = Object.entries(mismatch).filter(([, v]) => v.length > N * 0.05);
 if (mm.length) { console.log('\nIncohérences « Réponse : » à vérifier :'); mm.forEach(([k, v]) => { console.log(`  ${k} (${v.length})`); v.slice(0, 2).forEach((x) => console.log('     ' + x)); }); }
-console.log(`\nGénérateurs : ${Object.keys(TM.gens).length} · séries de calcul mental : ${Object.keys(TM.drills).length} · questions rédigées : ${Object.values(TM.banks).reduce((a, l) => a + l.length, 0)} · chapitres : ${Object.keys(TM.chapters).length}`);
+console.log(`\nExercices guidés : ${Object.keys(TM.guides || {}).length} · fiches : ${(TM.decks || []).reduce((a, d) => a + d.cards.length, 0)}`);
+console.log(`Générateurs : ${Object.keys(TM.gens).length} · séries de calcul mental : ${Object.keys(TM.drills).length} · questions rédigées : ${Object.values(TM.banks).reduce((a, l) => a + l.length, 0)} · chapitres : ${Object.keys(TM.chapters).length}`);
 process.exit(fails ? 1 : 0);

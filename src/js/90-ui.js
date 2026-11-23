@@ -1,5 +1,5 @@
 /* ===== Interface : accueil, onglets, cahier d'erreurs, stats, prof, réglages ===== */
-const VIEWS = ['accueil', ...SUBS.map((s) => s.hash), 'erreurs', 'stats', 'prof', 'reglages'];
+const VIEWS = ['accueil', ...SUBS.map((s) => s.hash), 'erreurs', 'stats', 'prof', 'reglages', 'fiches'];
 const HASH2SUB = Object.fromEntries(SUBS.map((s) => [s.hash, s.id]));
 function currentView() { const h = (location.hash || '').replace('#', ''); return VIEWS.includes(h) ? h : 'accueil'; }
 function go(view) { if (location.hash !== '#' + view) location.hash = view; else render(); }
@@ -17,6 +17,7 @@ function render() {
   else if (v === 'erreurs') body = vErrors();
   else if (v === 'stats') body = vStats();
   else if (v === 'prof') body = vProf();
+  else if (v === 'fiches') body = vFiches();
   else body = vSettings();
   app.style.setProperty('--sub', sub ? SUB[sub].color : 'var(--ink)');
   app.innerHTML = head + body;
@@ -32,7 +33,7 @@ function ringSVG(frac) {
 }
 function vHome(due) {
   const S = Store.S, p = S.profile, pt = projectTotal();
-  const intro = !p.seenIntro ? `<div class="notice"><b>Bienvenue dans ton appli Tage Mage.</b> Chaque onglet correspond à un sous-test : cours, exercices infinis, épreuves chronométrées. Commence par le programme du jour ci-dessous, il s'adapte à ton niveau au fil des séances.<div class="btns" style="margin-top:10px"><button class="btn sm" data-act="intro-ok">C'est parti</button></div></div>` : '';
+  const intro = !p.seenIntro ? `<div class="notice"><b>Bienvenue dans ton appli Tage Mage.</b> Chaque onglet correspond à un sous-test : cours, exercices infinis, épreuves chronométrées. Commence par le programme du jour ci-dessous, il s'adapte à ton niveau au fil des séances.<div class="btns" style="margin-top:10px"><button class="btn sm" data-act="diag">${ic('target')}Test de positionnement (15 min)</button><button class="btn ghost sm" data-act="intro-ok">Plus tard</button></div></div>` : '';
   const sync = Store.syncNote ? `<div class="notice warn">${esc(Store.syncNote)}</div>` : '';
   const minis = SUBS.map((s, i) => `<button class="mini" style="--sub:${s.color}" data-act="nav" data-v="${s.hash}"><span class="n">${s.short}</span><span class="v num">${pt.vals[i] != null ? pt.vals[i] : '—'}<small>/60</small></span></button>`).join('');
   const total = pt.total;
@@ -40,8 +41,10 @@ function vHome(due) {
   const proj = `<div class="proj"><div class="ring">${ringSVG(total != null ? total / p.target : 0)}<div class="lbl"><b>${total != null ? total : '—'}</b><span>/600 estimé</span></div></div><div class="stack" style="gap:6px"><p class="eyebrow">Projection</p><p><b>Objectif ${p.target}</b>${total != null ? ` · ${total >= p.target ? 'atteint !' : `encore ${p.target - total} points`}` : ''}</p><p class="small muted">${total != null ? `Calculée sur ${pt.known} sous-test${pt.known > 1 ? 's' : ''} travaillé${pt.known > 1 ? 's' : ''}.` : 'Réponds à quelques questions dans au moins deux sous-tests pour voir ton score estimé.'}${days != null ? ` <b>${days > 0 ? `J-${days}` : days === 0 ? 'C\'est le jour J !' : 'Date passée'}</b>` : ''}</p></div></div><div class="minis">${minis}</div>`;
   const tasks = dailyPlan();
   const doneN = tasks.filter((t) => t.done).length;
-  const plan = `<div class="sec"><div class="sec-h"><h2>Programme du jour</h2><span class="pill ${doneN === tasks.length ? 'ok' : ''}">${doneN}/${tasks.length}</span></div><div class="list">${tasks.map((t, i) => `<button class="task${t.done ? ' done' : ''}" data-act="task" data-i="${i}" style="--sub:${t.sub ? SUB[t.sub].color : 'var(--ink-3)'}"><span class="check${t.done ? ' on' : ''}">${t.done ? ic('check') : ''}</span><span class="grow"><span class="t">${esc(t.t)}</span><br><span class="s">${esc(t.s)}</span></span>${ic('chev', 'chev')}</button>`).join('')}</div></div>`;
-  const tiles = `<div class="tiles"><button class="tile" data-act="mock" style="--sub:var(--calc)">${ic('exam')}<span class="t">Tage Mage blanc</span><span class="s">6 × 20 min, score /600</span></button><button class="tile" data-act="nav" data-v="erreurs" style="--sub:var(--expr)">${ic('repeat')}<span class="t">Cahier d'erreurs</span><span class="s">${due ? `${plural(due, 'question')} à revoir` : 'Rien à revoir aujourd\'hui'}</span></button><button class="tile" data-act="nav" data-v="stats" style="--sub:var(--cdt)">${ic('chart')}<span class="t">Statistiques</span><span class="s">Progression et points faibles</span></button>${AI.available() ? `<button class="tile" data-act="nav" data-v="prof" style="--sub:var(--log)">${ic('spark')}<span class="t">Prof IA</span><span class="s">Pose tes questions</span></button>` : `<button class="tile" data-act="drill-quick" style="--sub:var(--ra)">${ic('bolt')}<span class="t">Série express</span><span class="s">60 s de calcul mental</span></button>`}</div>`;
+  const today = S.days[dayKey()], minToday = today ? Math.round(today.ms / 60000) : 0;
+  const plan = `<div class="sec"><div class="sec-h"><h2>Programme du jour</h2><span class="pill ${doneN === tasks.length ? 'ok' : ''}">${doneN}/${tasks.length}</span></div><div class="row small muted"><span class="grow">Aujourd'hui : <b class="num">${minToday}</b> min sur ${p.dailyMin} min visées</span></div><div class="bar ok" aria-hidden="true"><i style="width:${Math.min(100, Math.round(100 * minToday / p.dailyMin))}%"></i></div><div class="list">${tasks.map((t, i) => `<button class="task${t.done ? ' done' : ''}" data-act="task" data-i="${i}" style="--sub:${t.sub ? SUB[t.sub].color : 'var(--ink-3)'}"><span class="check${t.done ? ' on' : ''}">${t.done ? ic('check') : ''}</span><span class="grow"><span class="t">${esc(t.t)}</span><br><span class="s">${esc(t.s)}</span></span>${ic('chev', 'chev')}</button>`).join('')}</div></div>`;
+  const dueCards = TM.decks.reduce((a, d) => a + deckStats(d).due, 0);
+  const tiles = `<div class="tiles"><button class="tile" data-act="nav" data-v="fiches" style="--sub:var(--ra)">${ic('book')}<span class="t">Fiches mémo</span><span class="s">${dueCards ? `${plural(dueCards, 'carte')} à revoir` : '5 min par jour'}</span></button>${!S.diag ? `<button class="tile" data-act="diag" style="--sub:var(--cm)">${ic('target')}<span class="t">Test de positionnement</span><span class="s">19 questions, ton point de départ</span></button>` : ''}<button class="tile" data-act="strategy" style="--sub:var(--cdt)">${ic('flag')}<span class="t">Stratégie jour J</span><span class="s">Gestion du temps, réponses</span></button><button class="tile" data-act="mock" style="--sub:var(--calc)">${ic('exam')}<span class="t">Tage Mage blanc</span><span class="s">6 × 20 min, score /600</span></button><button class="tile" data-act="nav" data-v="erreurs" style="--sub:var(--expr)">${ic('repeat')}<span class="t">Cahier d'erreurs</span><span class="s">${due ? `${plural(due, 'question')} à revoir` : 'Rien à revoir aujourd\'hui'}</span></button><button class="tile" data-act="nav" data-v="stats" style="--sub:var(--cdt)">${ic('chart')}<span class="t">Statistiques</span><span class="s">Progression et points faibles</span></button>${AI.available() ? `<button class="tile" data-act="nav" data-v="prof" style="--sub:var(--log)">${ic('spark')}<span class="t">Prof IA</span><span class="s">Pose tes questions</span></button>` : `<button class="tile" data-act="drill-quick" style="--sub:var(--ra)">${ic('bolt')}<span class="t">Série express</span><span class="s">60 s de calcul mental</span></button>`}</div>`;
   const scoring = `<p class="small faint">Barème utilisé : ${scoringPenalty() ? '+4 / −1 / 0' : '+4 / 0 / 0, sans pénalité (format annoncé depuis 2025)'} · <button class="linkbtn" data-act="nav" data-v="reglages">modifier</button></p>`;
   return `<main class="sheet home"><div class="stack-lg">${intro}${sync}${proj}${plan}${tiles}${scoring}</div></main>`;
 }
@@ -78,6 +81,10 @@ function vSub(sub) {
   if (sub === 'calcul' || sub === 'logique') {
     const ids = Object.values(TM.drills).filter((d) => d.sub === sub).map((d) => d.id);
     extra += `<div class="sec"><div class="sec-h"><h2>${sub === 'calcul' ? 'Calcul mental chronométré' : 'Réflexes de logique'}</h2>${sub === 'calcul' ? '<button class="btn soft sm" data-act="drill-quick">Série express</button>' : ''}</div><p class="small muted">${sub === 'calcul' ? 'Des séries de 60 secondes où tu tapes la réponse. Objectif : gagner en vitesse sur les automatismes. Le niveau monte tout seul quand tu es prêt.' : 'Pour reconnaître les lettres et les écarts en un éclair.'}</p><div class="drills">${ids.map((id) => { const d = TM.drills[id], rec = Store.S.drills[id]; return `<button class="drill" data-act="drill" data-id="${id}"><span class="t">${esc(d.name)}</span><span class="s">${esc(d.desc)}</span><span class="rec">${rec && rec.best ? `Record ${rec.best}/min · niv. ${rec.lvl || 1}` : 'Pas encore tenté'}</span></button>`; }).join('')}</div></div>`;
+  }
+  if (sub === 'calcul') {
+    const G = Store.S.guides || {};
+    extra += `<div class="sec"><div class="sec-h"><h2>Exercices guidés pas à pas</h2></div><p class="small muted">Pour comprendre la méthode : le problème est découpé en étapes, tu tapes chaque résultat intermédiaire, avec un indice si tu bloques.</p><div class="drills">${Object.values(TM.guides).map((g) => `<button class="drill" data-act="guide" data-id="${g.id}"><span class="t">${esc(g.name)}</span><span class="s">${esc(TM.chapters[g.ch].short)}</span><span class="rec">${G[g.id] ? `Fait ${G[g.id].n} fois` : 'Pas encore fait'}</span></button>`).join('')}</div></div>`;
   }
   if (['ra', 'expr', 'cdt'].includes(sub)) {
     const pool = (Store.A[sub] || []).length;
@@ -228,6 +235,7 @@ function runTask(t) {
   if (a.type === 'chapter') { if (!Store.S.lessons[a.ch]) { openLesson(a.ch); Cur = { lessonOf: a.ch, task: t.id }; return; } return startTraining('calcul', { ch: a.ch, task: t.id }); }
   if (a.type === 'train') return startTraining(a.sub, { task: t.id });
   if (a.type === 'exam') return startExam(a.sub, t.id);
+  if (a.type === 'cards') return new CardSession({ max: 10, task: t.id }).start();
 }
 async function aiGenerate(sub) {
   if (!AI.available()) return toast('L\'IA n\'est pas disponible ici.');
@@ -290,6 +298,20 @@ function onClick(e) {
     case 'ai-gen': aiGenerate(d.sub); break;
     case 'ai-use': { const pool = (Store.A[d.sub] || []); if (d.sub === 'cdt') { const sets = aiTextSets(); if (sets.length) startAISet('cdt', sets[0], 'Texte · ' + toPlainTitle(sets[0][0].passageTitle)); } else startAISet(d.sub, pool.slice(0, 5)); break; }
     case 'coach': runCoach(); break;
+    case 'guide': startGuide(d.id); break;
+    case 'gk': if (Cur instanceof GuideSession) Cur.key(d.k); break;
+    case 'g-hint': if (Cur instanceof GuideSession) Cur.hint(); break;
+    case 'g-show': if (Cur instanceof GuideSession) Cur.show(); break;
+    case 'g-again': if (Cur instanceof GuideSession) startGuide(Cur.id, null); break;
+    case 'g-qcm': if (Cur instanceof GuideSession) { const ch = TM.guides[Cur.id].ch; startTraining('calcul', { ch }); } break;
+    case 'cards': new CardSession({ decks: [d.id], title: (TM.decks.find((x) => x.id === d.id) || {}).name }).start(); break;
+    case 'cards-all': new CardSession({}).start(); break;
+    case 'flip': if (Cur instanceof CardSession) Cur.flip(); break;
+    case 'rate': if (Cur instanceof CardSession) Cur.rate(d.k === '1'); break;
+    case 'diag': startDiag(); break;
+    case 'peek': openPeek(d.ch); break;
+    case 'peek-close': closePeek(); break;
+    case 'strategy': openStrategy(); break;
     case 'chip': sendChat(PROF_CHIPS[+d.i]); break;
     case 'chat-clear': Store.C.msgs = []; Store.save('chat'); render(); break;
     case 'clear-mastered': { const E = Store.E.items; Object.keys(E).forEach((k) => { if (E[k].box >= 6) delete E[k]; }); Store.save('errors'); render(); toast('Questions maîtrisées supprimées.'); break; }

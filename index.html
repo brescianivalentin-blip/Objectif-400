@@ -556,13 +556,25 @@ svg.chev { width: 18px; height: 18px; color: var(--ink-3); flex: 0 0 auto; }
 .pill svg, .linkbtn svg { width: 14px; height: 14px; }
 .task .grow, .li .grow { min-width: 0; }
 .modal-bg { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+/* Exercices guidés */
+.gstep { display: flex; gap: 10px; align-items: flex-start; background: var(--card); border: 1px solid var(--rule); border-radius: 13px; padding: 12px 13px; }
+.gstep.done { background: var(--card-2); }
+.gstep.cur { flex-direction: column; align-items: stretch; gap: 10px; border-color: var(--sub); box-shadow: 0 0 0 1px var(--sub); }
+.gprompt { font-size: 16px; line-height: 1.5; }
+/* Fiches mémo */
+.flash { width: 100%; min-height: 230px; border-radius: 18px; border: 1px solid var(--rule); background: var(--card); box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 22px; text-align: center; color: var(--ink); }
+.flash .ff { font-family: var(--f-display); font-weight: 700; font-size: 26px; line-height: 1.25; }
+.flash .fb2 { font-size: 18px; line-height: 1.45; padding-top: 14px; border-top: 2px dashed var(--rule); width: 100%; }
+.flash.on { border-color: var(--sub); }
+/* Cours en aperçu au-dessus d'une séance */
+.layer.peek { z-index: 70; }
 
 .update-bar{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:95;background:var(--btn);color:var(--btn-ink);border:0;border-radius:14px;padding:13px 16px;font:600 14px var(--f-body);box-shadow:var(--shadow)}
 </style>
 </head>
 <body>
 <div id="app" class="app"><p style="padding:24px 0">Chargement d'Objectif 400…</p></div>
-<script src="app.js?v=c775fa5333"></script>
+<script src="app.js?v=1f23a1788c"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').then(function (reg) {

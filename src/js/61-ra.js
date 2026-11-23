@@ -40,6 +40,8 @@ chapter({
 <tr><td>Attaque personnelle (ad hominem)</td><td>Il a été condamné, donc son étude est fausse.</td></tr>
 <tr><td>Raisonnement circulaire</td><td>Ce journal dit vrai puisqu'il l'affirme lui-même.</td></tr>
 <tr><td>Biais de sélection</td><td>Seuls les meilleurs ont testé le télétravail, et ils sont productifs.</td></tr>
+<tr><td>Homme de paille</td><td>Déformer la position de l'adversaire pour l'attaquer plus facilement.</td></tr>
+<tr><td>Échantillon non représentatif</td><td>Sondage fait uniquement auprès des membres d'un club de golf.</td></tr>
 </table></div>`,
 });
 

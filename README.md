@@ -2,6 +2,8 @@
 
 Application de révision du Tage Mage, pensée pour le téléphone : un onglet par sous-test (Calcul, Conditions minimales, Logique, Compréhension de textes, Raisonnement & Argumentation, Expression), des cours repris depuis les bases, des exercices générés à l'infini, des épreuves chronométrées de 15 questions en 20 minutes, un Tage Mage blanc complet, un cahier d'erreurs à révisions espacées et des statistiques.
 
+Également : des exercices guidés pas à pas (le problème est découpé en étapes, avec indices), des fiches mémo à répétition espacée, un test de positionnement, un indicateur de rythme pendant les épreuves et un guide « stratégie le jour J ».
+
 Application personnelle et non officielle, sans lien avec la FNEGE. Les questions sont originales.
 
 ## Deux versions

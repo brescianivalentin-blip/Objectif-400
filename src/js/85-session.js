@@ -64,7 +64,8 @@ function toPlainTitle(t) { return String(t || 'Texte').replace(/<[^>]+>/g, ''); 
 function fbHTML(q, sel) {
   const ok = sel === q.answer;
   const head = sel == null ? `Réponse : ${LETTERS[q.answer]}` : ok ? 'Bonne réponse' : `Raté : la bonne réponse est ${LETTERS[q.answer]}`;
-  return `<div class="fb ${ok ? 'ok' : 'ko'}"><div class="fb-h">${ok ? ic('check') : ic('close')}<span>${head}</span></div><div class="expl">${q.expl || ''}</div>${q.tip ? `<div class="tip">${q.tip}</div>` : ''}${q.trap ? `<div class="trap">${q.trap}</div>` : ''}${aiExplainBlock()}</div>`;
+  const lessonBtn = q.chapter && TM.chapters[q.chapter] ? `<button class="btn ghost sm" data-act="peek" data-ch="${q.chapter}">${ic('book')}Revoir le cours</button>` : '';
+  return `<div class="fb ${ok ? 'ok' : 'ko'}"><div class="fb-h">${ok ? ic('check') : ic('close')}<span>${head}</span></div><div class="expl">${q.expl || ''}</div>${q.tip ? `<div class="tip">${q.tip}</div>` : ''}${q.trap ? `<div class="trap">${q.trap}</div>` : ''}<div class="row wrap">${lessonBtn}</div>${aiExplainBlock()}</div>`;
 }
 function aiExplainBlock() {
   if (!AI.available()) return '';
@@ -107,6 +108,7 @@ class Session {
       const left = (this.deadline - Date.now()) / 1000;
       c.querySelector('span').textContent = mmss(left);
       c.classList.toggle('low', left < 120);
+      const pace = $('#pace'); if (pace) { const p = this.pace(); pace.textContent = p.txt; pace.className = 'pill ' + p.cls; }
       if (left <= 0) { toast('Temps écoulé : l\'épreuve est terminée.'); this.finish(); }
     } else if (!this.revealed) {
       const el = (Date.now() - this.qStart) / 1000;
@@ -114,12 +116,20 @@ class Session {
       c.classList.toggle('low', el > (this.q.target || 80));
     }
   }
+  pace() {
+    const el = (Date.now() - this.t0) / 1000, per = this.limit / this.n;
+    const ideal = Math.min(this.n, Math.floor(el / per) + 1), at = this.i + 1;
+    if (this.diag) return { txt: `Question idéale : ${ideal}`, cls: '' };
+    if (at >= ideal + 1) return { txt: `En avance (idéal : q. ${ideal})`, cls: 'ok' };
+    if (at >= ideal - 1) return { txt: `Dans les temps (q. ${ideal})`, cls: '' };
+    return { txt: `En retard : vise la q. ${ideal}`, cls: 'warn' };
+  }
   render() {
     const q = this.q, exam = this.mode === 'exam';
     const answered = this.ans.filter((a) => a != null).length;
     const prog = exam ? answered / this.n : this.i / this.n;
     const st = { sel: this.ans[this.i], reveal: !exam && this.revealed, flag: this.flags.has(this.i), fullText: this.fullText };
-    const bar = `<div class="lbar"><button class="iconbtn" data-act="quit" aria-label="Quitter">${ic('close')}</button><div class="ttl">${esc(this.title)} <span class="faint num">· ${this.i + 1}/${this.n}</span></div><span class="chrono" id="chrono">${ic('clock')}<span>${exam ? mmss((this.deadline - Date.now()) / 1000) : '0:00'}</span></span></div><div class="progress" aria-hidden="true"><i style="width:${Math.round(prog * 100)}%"></i></div>`;
+    const bar = `<div class="lbar"><button class="iconbtn" data-act="quit" aria-label="Quitter">${ic('close')}</button><div class="ttl">${esc(this.title)} <span class="faint num">· ${this.i + 1}/${this.n}</span></div><span class="chrono" id="chrono">${ic('clock')}<span>${exam ? mmss((this.deadline - Date.now()) / 1000) : '0:00'}</span></span></div><div class="progress" aria-hidden="true"><i style="width:${Math.round(prog * 100)}%"></i></div>${exam ? `<div class="row" style="margin-top:8px"><span class="pill" id="pace">${this.pace().txt}</span></div>` : ''}`;
     let foot;
     if (exam) {
       foot = `<div class="qfoot"><button class="btn ghost" data-act="prev" ${this.i === 0 ? 'disabled' : ''}>${ic('back')}</button><button class="btn ghost" data-act="flag" aria-pressed="${st.flag}">${ic('flag')}</button><button class="btn ghost" data-act="grid">Grille</button>${this.i + 1 < this.n ? `<button class="btn" data-act="next">Suivante</button>` : `<button class="btn" data-act="end">Terminer</button>`}</div>`;
@@ -175,14 +185,16 @@ class Session {
       if (exam) { recordAnswer(q, a === q.answer, this.ms[k] || 0); markSeen(q); if (a !== q.answer) addError(q); }
     });
     const totalMs = Date.now() - this.t0;
-    const sc = exam ? score60(ok, ko) : null;
-    saveSession({ t: Date.now(), sub: this.sub, mode: this.mock ? 'mock' : this.mode, n, ok, sc, ms: totalMs, task: this.task, ch: this.ch || null });
+    const sc = exam && !this.diag ? score60(ok, ko) : null;
+    saveSession({ t: Date.now(), sub: this.sub, mode: this.mock ? 'mock' : this.diag ? 'diag' : this.mode, n, ok, sc, ms: totalMs, task: this.task, ch: this.ch || null });
     this.res = { n, ok, ko, blank, sc, totalMs, qs, ans };
     if (this.mock) return this.mock.subDone(this);
+    if (this.diag) return diagResults(this);
     if (!n) return closeLayer();
     this.renderResults();
   }
   renderResults() {
+    if (this.diag) return diagResults(this);
     const r = this.res, exam = this.mode === 'exam';
     const avg = r.n ? r.qs.reduce((a, q, k) => a + (this.ms[k] || 0), 0) / r.n / 1000 : 0;
     const hero = exam
@@ -192,7 +204,9 @@ class Session {
     const rows = r.qs.map((q, k) => { const a = r.ans[k], good = a === q.answer; return `<button class="li" data-act="rev-q" data-k="${k}"><span class="idx ${good ? 'done' : ''}">${k + 1}</span><span class="grow"><span class="t">${esc(skillName(q))}</span><br><span class="s">${a == null ? 'Sans réponse' : good ? 'Juste' : `Ta réponse : ${LETTERS[a]} · bonne : ${LETTERS[q.answer]}`} · ${Math.round((this.ms[k] || 0) / 1000)} s</span></span>${ic('chev', 'chev')}</button>`; }).join('');
     const wrongN = r.ko + r.blank;
     const msg = exam ? examComment(r.sc) : r.n && r.ok / r.n >= 0.8 ? 'Très bien : la difficulté va augmenter automatiquement.' : r.n && r.ok / r.n >= 0.5 ? 'C\'est en progrès. Relis les corrections des questions ratées.' : 'Pas de panique : relis le cours, puis refais une série. Les erreurs sont dans ton cahier.';
-    openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('close')}</button><div class="ttl">Bilan</div></div><div class="stack-lg">${hero}<p class="center muted">${msg}</p>${stats}<div class="btns">${wrongN ? `<button class="btn" data-act="redo-wrong">${ic('repeat')}Refaire les ${plural(wrongN, 'erreur')}</button>` : ''}<button class="btn ghost" data-act="close">Terminer</button></div><div class="sec"><div class="sec-h"><h3>Corrections</h3></div><div class="list">${rows}</div></div></div>`, this.sub);
+    const slow = exam ? r.qs.map((q, k) => ({ k, s: Math.round((this.ms[k] || 0) / 1000) })).filter((x) => x.s > 120) : [];
+    const slowTxt = slow.length ? `<div class="notice warn">Tu as passé plus de 2 minutes sur ${slow.map((x) => `la q. ${x.k + 1} (${mmss(x.s)})`).join(', ')}. Le jour J, applique la règle des 90 secondes : coche ta meilleure réponse et passe.</div>` : '';
+    openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('close')}</button><div class="ttl">Bilan</div></div><div class="stack-lg">${hero}<p class="center muted">${msg}</p>${slowTxt}${stats}<div class="btns">${wrongN ? `<button class="btn" data-act="redo-wrong">${ic('repeat')}Refaire les ${plural(wrongN, 'erreur')}</button>` : ''}<button class="btn ghost" data-act="close">Terminer</button></div><div class="sec"><div class="sec-h"><h3>Corrections</h3></div><div class="list">${rows}</div></div></div>`, this.sub);
     render();
   }
   reviewOne(k) {
@@ -352,5 +366,7 @@ function openLesson(chId) {
   Store.S.lessons[chId] = Date.now(); Store.save('main');
   const skills = ch.gens.map((id) => { const m = skillMastery(id); const g = TM.gens[id]; return `<div class="li"><span class="grow"><span class="t">${esc(g.name)}</span><div class="bar" style="margin-top:6px"><i style="width:${m || 0}%"></i></div></span><button class="btn soft sm" data-act="train-skill" data-id="${id}">${ic('play')}10 Q</button></div>`; }).join('');
   Cur = { lessonOf: chId };
-  openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('back')}</button><div class="ttl">${esc(ch.title)}</div></div><article class="lesson"><p class="eyebrow">${esc(SUB[ch.sub].name)} · cours</p><h2>${esc(ch.title)}</h2>${ch.lesson}</article><div class="sec" style="margin-top:24px"><div class="sec-h"><h3>Exercices de ce chapitre</h3></div><button class="btn block" data-act="train-ch" data-ch="${chId}">${ic('play')}S'entraîner sur tout le chapitre (10 questions)</button><div class="list">${skills}</div></div>`, ch.sub);
+  const gds = guidesOf(chId);
+  const gHtml = gds.length ? `<div class="sec" style="margin-top:24px"><div class="sec-h"><h3>Exercices guidés pas à pas</h3></div><p class="small muted">Le problème est découpé en étapes : tu tapes chaque résultat, avec un indice si tu bloques. Idéal juste après le cours.</p><div class="list">${gds.map((g) => `<button class="li" data-act="guide" data-id="${g.id}"><span class="idx sub">${ic('play')}</span><span class="grow"><span class="t">${esc(g.name)}</span></span>${ic('chev', 'chev')}</button>`).join('')}</div></div>` : '';
+  openLayer(`<div class="lbar"><button class="iconbtn" data-act="close" aria-label="Fermer">${ic('back')}</button><div class="ttl">${esc(ch.title)}</div></div><article class="lesson"><p class="eyebrow">${esc(SUB[ch.sub].name)} · cours</p><h2>${esc(ch.title)}</h2>${ch.lesson}</article>${gHtml}<div class="sec" style="margin-top:24px"><div class="sec-h"><h3>Exercices de ce chapitre</h3></div><button class="btn block" data-act="train-ch" data-ch="${chId}">${ic('play')}S'entraîner sur tout le chapitre (10 questions)</button><div class="list">${skills}</div></div>`, ch.sub);
 }

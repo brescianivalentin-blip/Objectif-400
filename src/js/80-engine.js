@@ -135,6 +135,10 @@ function dailyPlan() {
     const vSub = ['ra', 'expr', 'cdt'][dn % 3];
     tasks.push({ id: 'verbal', sub: vSub, icon: 'book', t: `${SUB[vSub].name} : ${vSub === 'cdt' ? '1 texte' : '10 questions'}`, s: vSub === 'cdt' ? 'Garder ton point fort au top' : 'Points rapides à sécuriser', act: { type: 'train', sub: vSub } });
   }
+  if (Store.S.profile.dailyMin >= 30) {
+    const dueCards = TM.decks.reduce((a, d) => a + deckStats(d).due, 0);
+    tasks.push({ id: 'cards', sub: null, icon: 'book', t: 'Fiches mémo : 10 cartes', s: dueCards ? `${plural(dueCards, 'carte')} à revoir · 5 minutes` : 'Nouvelles cartes · 5 minutes, idéal dans les transports', act: { type: 'cards' } });
+  }
   if (Store.S.profile.dailyMin >= 45 && dn % 3 === 0) {
     const weakest = SUBS.map((s) => ({ s, p: projectSub(s.id) })).sort((a, b) => (a.p == null ? -1 : a.p) - (b.p == null ? -1 : b.p))[0].s;
     tasks.push({ id: 'exam', sub: weakest.id, icon: 'clock', t: `Épreuve chronométrée : ${weakest.name}`, s: '15 questions en 20 minutes', act: { type: 'exam', sub: weakest.id } });

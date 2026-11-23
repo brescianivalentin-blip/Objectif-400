@@ -85,8 +85,9 @@ gen('cm.rect', { sub: 'cm', ch: 'cm-methode', name: 'Géométrie : aire d\'un re
 });
 gen('cm.moy', { sub: 'cm', ch: 'cm-methode', name: 'Moyennes', target: 75, diffs: [2, 3] }, (R) => {
   const n = R.int(12, 30), avg = R.int(9, 15);
-  const v = cmPick(R, ['C', 'C2', 'E', 'D', 'A']);
+  const v = cmPick(R, ['C', 'C2', 'E', 'D', 'A', 'B']);
   const Q = 'Quelle est la moyenne de cette classe au dernier devoir ?';
+  if (v === 'B') return cmQ(Q, `La moitié des élèves a eu plus de ${avg}.`, `Les ${n} élèves ont totalisé ${n * avg} points.`, 'B', `${KO}.`, `${n * avg} ${DV} ${n} = ${avg} : ${OK}.`);
   if (v === 'C') return cmQ(Q, `La somme de toutes les notes vaut ${n * avg}.`, `La classe compte ${n} élèves.`, 'C', `${KO} (combien d'élèves ?).`, `${KO}.`, `${n * avg} ${DV} ${n} = ${avg} : ça ${OK}.`);
   if (v === 'C2') return cmQ(Q, 'Les filles ont 14 de moyenne et les garçons 11.', 'Il y a deux fois plus de filles que de garçons.', 'C', `${KO} (tout dépend des effectifs).`, `${KO}.`, `sur 3 élèves, 2 filles et 1 garçon : (2 × 14 + 11) ÷ 3 = 13. Pas besoin des effectifs exacts : ça ${OK}.`, '<b>Astuce :</b> une proportion suffit pour une moyenne pondérée.');
   if (v === 'E') return cmQ(Q, 'Les filles ont 14 de moyenne et les garçons 11.', `La classe compte ${n} élèves.`, 'E', `${KO}.`, `${KO}.`, `on ne sait pas combien il y a de filles : ${KO}.`);
@@ -95,8 +96,9 @@ gen('cm.moy', { sub: 'cm', ch: 'cm-methode', name: 'Moyennes', target: 75, diffs
 });
 gen('cm.age', { sub: 'cm', ch: 'cm-methode', name: 'Âges', target: 70, diffs: [1, 2] }, (R) => {
   const p = R.int(20, 40), m = p - R.int(2, 8);
-  const v = cmPick(R, ['A', 'C', 'E', 'B']);
+  const v = cmPick(R, ['A', 'C', 'E', 'B', 'D']);
   const Q = 'Quel âge a Paul ?';
+  if (v === 'D') { const dad = p + R.int(24, 34), k = R.int(3, 12); return cmQ(Q, `Paul a ${dad - p} ans de moins que son père, qui a ${dad} ans.`, `Dans ${k} ans, Paul aura ${p + k} ans.`, 'D', `${dad} ${MINUS} ${dad - p} = ${p} : ${OK}.`, `${p + k} ${MINUS} ${k} = ${p} : ${OK}.`); }
   if (v === 'A') {
     const back = R.int(5, 12), fwd = p - 2 * back;
     if (fwd > 0) return cmQ(Q, `Dans ${fwd} ans, Paul aura le double de l'âge qu'il avait il y a ${back} ans.`, 'Paul est plus âgé que Marie.', 'A', `p + ${fwd} = 2(p ${MINUS} ${back}) → p = ${fwd} + ${2 * back} = ${p} : ${OK}.`, `${KO}.`);
@@ -118,8 +120,9 @@ gen('cm.ineq', { sub: 'cm', ch: 'cm-methode', name: 'Inégalités : x > y ?', ta
 });
 gen('cm.vit', { sub: 'cm', ch: 'cm-methode', name: 'Vitesses et distances', target: 75 }, (R, d) => {
   const v0 = R.pick([60, 80, 90, 100, 120]), t0 = R.pick([1.5, 2, 2.5, 3]);
-  const v = cmPick(R, d === 1 ? ['C', 'D'] : ['C', 'A', 'E', 'D']);
+  const v = cmPick(R, d === 1 ? ['C', 'D'] : ['C', 'A', 'E', 'D', 'B']);
   const Q = 'Quelle est la distance entre les villes A et B ?';
+  if (v === 'B') { const [a, b, dd] = R.pick([[60, 90, 180], [40, 60, 120], [80, 120, 240], [50, 75, 150]]); return cmQ(Q, 'Le trajet dure moins de 3 heures en voiture.', `À ${a} km/h, le trajet dure 1 h de plus qu'à ${b} km/h.`, 'B', `${KO}.`, `${F('d', a)} ${MINUS} ${F('d', b)} = 1 donne une seule valeur, d = ${dd} km : ${OK}.`); }
   if (v === 'C') return cmQ(Q, `Un train relie A à B en ${hm(t0)}.`, `Ce train roule à ${unit(v0, 'km/h')} de moyenne.`, 'C', `${KO} (vitesse inconnue).`, `${KO} (durée inconnue).`, `d = ${v0} ${X} ${fmt(t0)} = ${fmt(v0 * t0)} km : ça ${OK}.`);
   if (v === 'A') { const [a, b, dd] = R.pick([[60, 90, 180], [40, 60, 120], [80, 120, 240], [50, 75, 150]]); return cmQ(Q, `À ${a} km/h, le trajet dure 1 h de plus qu'à ${b} km/h.`, 'Le trajet dure moins de 3 heures en voiture.', 'A', `${F('d', a)} ${MINUS} ${F('d', b)} = 1 donne une seule valeur, d = ${dd} km : ${OK}.`, `${KO}.`, null, '<b>Rappel :</b> une équation à une inconnue suffit, inutile de la résoudre.'); }
   if (v === 'E') return cmQ(Q, `Une voiture fait le trajet à ${unit(v0, 'km/h')}.`, 'Un camion met 30 minutes de plus que la voiture.', 'E', `${KO}.`, `${KO}.`, `il manque la vitesse du camion (ou une durée) : ${KO}.`);
@@ -137,8 +140,10 @@ gen('cm.div', { sub: 'cm', ch: 'cm-methode', name: 'Divisibilité', target: 65, 
 });
 gen('cm.effectif', { sub: 'cm', ch: 'cm-methode', name: 'Effectifs et proportions', target: 70, diffs: [1, 2] }, (R) => {
   const T = R.pick([20, 25, 30, 40, 50]), pf = R.pick([20, 40, 60]), f = T * pf / 100, g = T - f;
-  const v = cmPick(R, ['C', 'C2', 'E', 'A']);
+  const v = cmPick(R, ['C', 'C2', 'E', 'A', 'B', 'D']);
   const Q = 'Combien d\'élèves compte cette classe ?';
+  if (v === 'B') { const k = R.int(2, 6); return cmQ(Q, 'Il y a plus de filles que de garçons.', `Si ${k} élèves partaient, il en resterait ${T - k}.`, 'B', `${KO}.`, `${T - k} + ${k} = ${T} : ${OK}.`); }
+  if (v === 'D') { const k = R.int(2, 6); return cmQ(Q, `Si ${k} élèves partaient, il en resterait ${T - k}.`, `Les ${f} filles représentent ${pc(pf)} de la classe.`, 'D', `${T - k} + ${k} = ${T} : ${OK}.`, `${f} ${DV} ${fmt(pf / 100)} = ${T} : ${OK}.`); }
   if (v === 'C') return cmQ(Q, `Il y a ${f} filles.`, `Les filles représentent ${pc(pf)} de la classe.`, 'C', `${KO}.`, `${KO}.`, `${f} ${DV} ${fmt(pf / 100)} = ${T} : ça ${OK}.`);
   if (v === 'C2' && g !== f) { const dlt = Math.abs(g - f); return cmQ(Q, `Il y a ${dlt} ${g > f ? 'garçons de plus que de filles' : 'filles de plus que de garçons'}.`, `Les garçons représentent ${pc(100 - pf)} de la classe.`, 'C', `${KO}.`, `${KO}.`, `l'écart de ${dlt} élèves représente ${pc(Math.abs(100 - 2 * pf))} de la classe → ${dlt} ${DV} ${fmt(Math.abs(100 - 2 * pf) / 100)} = ${T} : ça ${OK}.`); }
   if (v === 'E') return cmQ(Q, `Les filles représentent ${pc(pf)} de la classe.`, `Les garçons représentent ${pc(100 - pf)} de la classe.`, 'E', `${KO}.`, `c'est la même information : ${KO}.`, `aucun nombre d'élèves : ${KO}.`);
@@ -146,9 +151,10 @@ gen('cm.effectif', { sub: 'cm', ch: 'cm-methode', name: 'Effectifs et proportion
   return cmQ(Q, `Si ${k} élèves partaient, il en resterait ${T - k}.`, 'Il y a plus de filles que de garçons.', 'A', `${T - k} + ${k} = ${T} : ${OK}.`, `${KO}.`);
 });
 gen('cm.tri', { sub: 'cm', ch: 'cm-methode', name: 'Triangles', target: 75, diffs: [2, 3] }, (R) => {
-  const v = cmPick(R, ['C', 'A', 'D', 'E']);
+  const v = cmPick(R, ['C', 'A', 'D', 'E', 'B']);
   const Q = 'Le triangle ABC est-il rectangle ?';
   const [a, b, c] = R.pick([[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17]]);
+  if (v === 'B') return cmQ(Q, `AB = ${c} cm.`, 'Les angles  et B̂ mesurent 40° et 50°.', 'B', `${KO}.`, `Ĉ = 180 ${MINUS} 40 ${MINUS} 50 = 90° : ${OK}.`);
   if (v === 'C') return cmQ(Q, `AB = ${a} cm et BC = ${b} cm.`, `AC = ${c} cm.`, 'C', `le 3e côté est inconnu : ${KO}.`, `${KO}.`, `${a}² + ${b}² = ${a * a + b * b} = ${c}² : rectangle en B (réciproque de Pythagore), ça ${OK}.`);
   if (v === 'A') return cmQ(Q, 'Les angles  et B̂ mesurent 35° et 55°.', `AB = ${c} cm.`, 'A', `Ĉ = 180 ${MINUS} 35 ${MINUS} 55 = 90° : ${OK}.`, `${KO}.`);
   if (v === 'D') return cmQ(Q, ' + B̂ = 90°', 'AB² = AC² + BC²', 'D', `Ĉ = 180 ${MINUS} 90 = 90° : ${OK}.`, `réciproque de Pythagore : rectangle en C, ${OK}.`);
@@ -156,8 +162,12 @@ gen('cm.tri', { sub: 'cm', ch: 'cm-methode', name: 'Triangles', target: 75, diff
 });
 gen('cm.travail', { sub: 'cm', ch: 'cm-methode', name: 'Travail en commun', target: 75, diffs: [2, 3] }, (R) => {
   const [a, b, t] = R.pick([[6, 12, 4], [3, 6, 2], [10, 15, 6], [4, 12, 3], [12, 24, 8]]);
-  const v = cmPick(R, ['C', 'E', 'A']);
+  const v = cmPick(R, ['C', 'E', 'A', 'B', 'D']);
   const Q = 'Combien de temps faudrait-il à Anna, seule, pour faire ce travail ?';
+  const third = a / 3 === Math.round(a / 3);
+  const anna = `En ${third ? a / 3 : 1} h, Anna fait ${third ? 'le tiers' : F(1, a)} du travail.`;
+  if (v === 'B') return cmQ(Q, `Bruno, seul, mettrait ${b} h.`, anna, 'B', `on ne sait rien du rythme d'Anna : ${KO}.`, `Anna travaille à rythme constant : ${a} h, ${OK}.`);
+  if (v === 'D') return cmQ(Q, `Anna et Bruno mettent ${t} h ensemble, et Bruno seul mettrait ${b} h.`, anna, 'D', `${F(1, t)} ${MINUS} ${F(1, b)} = ${F(1, a)} par heure, donc ${a} h : ${OK}.`, `${a} h : ${OK}.`);
   if (v === 'C') return cmQ(Q, `Anna et Bruno, ensemble, mettent ${t} h.`, `Bruno, seul, mettrait ${b} h.`, 'C', `${KO}.`, `${KO}.`, `Anna : ${F(1, t)} ${MINUS} ${F(1, b)} = ${F(1, a)} du travail par heure, donc ${a} h : ça ${OK}.`);
   if (v === 'E') return cmQ(Q, `Anna et Bruno, ensemble, mettent ${t} h.`, 'Bruno travaille plus vite qu\'Anna.', 'E', `${KO}.`, `${KO}.`, `une inégalité ne donne pas le rythme de Bruno : ${KO}.`);
   return cmQ(Q, `En ${a / 3 === Math.round(a / 3) ? a / 3 : 1} h, Anna fait ${a / 3 === Math.round(a / 3) ? 'le tiers' : `${F(1, a)}`} du travail.`, `Bruno, seul, mettrait ${b} h.`, 'A', `Anna travaille à rythme constant : ${a} h, ${OK}.`, `on ne connaît rien du rythme d'Anna : ${KO}.`);
@@ -174,17 +184,46 @@ gen('cm.ratio', { sub: 'cm', ch: 'cm-methode', name: 'Rapports et proportions', 
 });
 gen('cm.venn', { sub: 'cm', ch: 'cm-methode', name: 'Ensembles', target: 75, diffs: [2, 3] }, (R) => {
   const both = R.int(3, 8), onlyF = R.int(5, 15), onlyT = R.int(4, 12), none = R.int(2, 10), F0 = onlyF + both, T0 = onlyT + both, N = onlyF + onlyT + both + none;
-  const v = cmPick(R, ['C', 'E', 'C2']);
+  const v = cmPick(R, ['C', 'E', 'C2', 'A', 'B']);
   const Q = 'Combien d\'élèves de cette classe pratiquent à la fois le foot et le tennis ?';
+  const full = `La classe compte ${N} élèves : ${F0} font du foot, ${T0} du tennis et ${none} ne font aucun des deux.`, vague = 'Certains élèves pratiquent les deux sports.';
+  const why = `au moins un sport : ${N} ${MINUS} ${none} = ${N - none}, donc les deux : ${F0} + ${T0} ${MINUS} ${N - none} = ${both}`;
+  if (v === 'A') return cmQ(Q, full, vague, 'A', `${why} : ${OK}.`, `${KO}.`);
+  if (v === 'B') return cmQ(Q, vague, full, 'B', `${KO}.`, `${why} : ${OK}.`);
   if (v === 'C') return cmQ(Q, `${N - none} élèves pratiquent au moins l'un des deux sports.`, `${F0} élèves font du foot et ${T0} du tennis.`, 'C', `${KO}.`, `${KO}.`, `${F0} + ${T0} ${MINUS} ${N - none} = ${both} : ça ${OK}.`);
   if (v === 'E') return cmQ(Q, `${F0} élèves font du foot et ${T0} du tennis.`, `La classe compte ${N} élèves.`, 'E', `${KO}.`, `${KO}.`, `il manque le nombre d'élèves qui ne font aucun des deux : ${KO}.`);
   return cmQ(Q, `La classe compte ${N} élèves, dont ${F0} font du foot et ${T0} du tennis.`, `${none} élèves ne pratiquent aucun de ces deux sports.`, 'C', `${KO}.`, `${KO}.`, `au moins un sport : ${N} ${MINUS} ${none} = ${N - none}, donc les deux : ${F0} + ${T0} ${MINUS} ${N - none} = ${both}. Ça ${OK}.`);
 });
 gen('cm.ent', { sub: 'cm', ch: 'cm-methode', name: 'Trouver un entier', target: 65 }, (R) => {
-  const v = cmPick(R, ['C', 'A', 'E', 'B']);
+  const v = cmPick(R, ['C', 'A', 'E', 'B', 'D']);
   const Q = 'Quelle est la valeur de l\'entier n ?';
+  if (v === 'D') return cmQ(Q, 'n est un nombre premier pair.', 'n est un entier positif dont le carré vaut 4.', 'D', `le seul nombre premier pair est 2 : ${OK}.`, `n = 2 : ${OK}.`);
   if (v === 'C') return cmQ(Q, 'n est un multiple de 7 compris entre 20 et 40.', 'n est pair.', 'C', `21, 28 ou 35 : ${KO}.`, `${KO}.`, `seul 28 est pair : ça ${OK}.`);
   if (v === 'A') return cmQ(Q, 'n est un nombre premier compris entre 24 et 30.', 'n est impair.', 'A', `seul 29 convient : ${OK}.`, `${KO}.`);
   if (v === 'E') return cmQ(Q, 'n est un multiple de 5 compris entre 10 et 40.', 'n est impair.', 'E', `${KO}.`, `${KO}.`, `15, 25 ou 35 : ${KO}.`);
   return cmQ(Q, 'n est impair.', 'n est le carré d\'un entier et 40 &lt; n &lt; 60.', 'B', `${KO}.`, `seul 49 = 7² convient : ${OK}.`);
+});
+gen('cm.suite', { sub: 'cm', ch: 'cm-methode', name: 'Suites', target: 70, diffs: [2, 3] }, (R) => {
+  const u1 = R.int(1, 12), r = R.int(2, 9), u = (k) => u1 + (k - 1) * r;
+  const v = cmPick(R, ['C', 'A', 'B', 'D', 'E']);
+  const Q = 'On considère une suite arithmétique (on ajoute toujours le même nombre). Quel est son 10e terme ?';
+  const both = `u<sub>10</sub> = ${u1} + 9 ${X} ${r} = ${u(10)}`;
+  if (v === 'C') return cmQ(Q, `Son premier terme vaut ${u1}.`, `On ajoute ${r} à chaque étape.`, 'C', `la raison est inconnue : ${KO}.`, `le point de départ est inconnu : ${KO}.`, `${both} : ça ${OK}.`);
+  const two = `Son 2e terme vaut ${u(2)} et son 5e terme vaut ${u(5)}.`, two2 = `de u<sub>2</sub> à u<sub>5</sub>, on ajoute 3 fois la raison : r = (${u(5)} ${MINUS} ${u(2)}) ${DV} 3 = ${r}, donc u<sub>1</sub> = ${u1} et ${both}`;
+  if (v === 'A') return cmQ(Q, two, 'Tous ses termes sont positifs.', 'A', `${two2} : ${OK}.`, `${KO}.`);
+  if (v === 'B') return cmQ(Q, 'Tous ses termes sont positifs.', two, 'B', `${KO}.`, `${two2} : ${OK}.`);
+  if (v === 'D') return cmQ(Q, `Son 1er terme vaut ${u1} et son 4e vaut ${u(4)}.`, `Son 3e terme vaut ${u(3)} et on ajoute ${r} à chaque étape.`, 'D', `r = (${u(4)} ${MINUS} ${u1}) ${DV} 3 = ${r} : ${OK}.`, `on remonte à u<sub>1</sub> = ${u1} : ${OK}.`);
+  return cmQ(Q, `On ajoute ${r} à chaque étape.`, 'Tous ses termes sont positifs.', 'E', `${KO}.`, `${KO}.`, `le premier terme reste inconnu : ${KO}.`);
+});
+gen('cm.benef', { sub: 'cm', ch: 'cm-methode', name: 'Chiffre d\'affaires et bénéfice', target: 70, diffs: [1, 2] }, (R) => {
+  const q = R.int(5, 30) * 20, mu = R.pick([5, 8, 10, 12, 15]), CF = Math.max(100, Math.round(q * mu * R.pick([0.3, 0.4, 0.5, 0.6]) / 100) * 100), cv = R.pick([10, 12, 15, 20]);
+  const pv = cv + mu, CA = q * pv, ben = q * mu - CF, CT = CA - ben;
+  const v = cmPick(R, ['C', 'A', 'B', 'E', 'D']);
+  const Q = 'Quel bénéfice l\'entreprise a-t-elle réalisé ce mois-ci ?';
+  const full = `Elle a vendu ${fmt(q)} unités, chacune lui rapportant ${mu} € de marge, et ses coûts fixes sont de ${fmt(CF)} €.`;
+  if (v === 'C') return cmQ(Q, `Son chiffre d'affaires est de ${fmt(CA)} €.`, `Ses coûts totaux s'élèvent à ${fmt(CT)} €.`, 'C', `${KO}.`, `${KO}.`, `bénéfice = ${fmt(CA)} ${MINUS} ${fmt(CT)} = ${fmt(ben)} € : ça ${OK}.`);
+  if (v === 'A') return cmQ(Q, full, 'Son chiffre d\'affaires a augmenté de 10 % par rapport au mois précédent.', 'A', `${fmt(q)} ${X} ${mu} ${MINUS} ${fmt(CF)} = ${fmt(ben)} € : ${OK}.`, `${KO}.`);
+  if (v === 'B') return cmQ(Q, 'Son chiffre d\'affaires a augmenté de 10 % par rapport au mois précédent.', full, 'B', `${KO}.`, `${fmt(q)} ${X} ${mu} ${MINUS} ${fmt(CF)} = ${fmt(ben)} € : ${OK}.`);
+  if (v === 'E') return cmQ(Q, `Son chiffre d'affaires est de ${fmt(CA)} €.`, `Ses coûts fixes sont de ${fmt(CF)} €.`, 'E', `${KO}.`, `${KO}.`, `il manque les coûts variables : ${KO}.`);
+  return cmQ(Q, `Ses coûts totaux s'élèvent à ${fmt(CT)} € pour un chiffre d'affaires de ${fmt(CA)} €.`, full, 'D', `${fmt(CA)} ${MINUS} ${fmt(CT)} = ${fmt(ben)} € : ${OK}.`, `${fmt(q)} ${X} ${mu} ${MINUS} ${fmt(CF)} = ${fmt(ben)} € : ${OK}.`);
 });
